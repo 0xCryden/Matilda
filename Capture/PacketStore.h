@@ -27,6 +27,6 @@ public:
 
 private:
     mutable std::mutex m_lock;
-    pcpp::RawPacketVector m_packets;
+    std::vector<pcpp::RawPacket*> m_packets;
     std::vector<std::vector<std::string>> m_meta;
 };

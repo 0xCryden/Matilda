@@ -1,6 +1,6 @@
 // AppMain.cpp - main application class
 #include "framework.h"
-#include "Matilda.h"
+#include "resource.h"
 #include "AppMain.h"
 
 #include <windows.h>

@@ -144,6 +144,11 @@
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Themes.h" />
+    <ClInclude Include="Net\ChecksumUtils.h" />
+    <ClInclude Include="Net\PacketRewriter.h" />
+    <ClInclude Include="Utils\HexParser.h" />
+    <ClInclude Include="Capture\PacketStore.h" />
+    <ClInclude Include="Capture\NotificationDispatcher.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppMain.cpp" />
@@ -151,6 +156,11 @@
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="CaptureManager.cpp" />
     <ClCompile Include="CaptureManager_extra.cpp" />
+    <ClCompile Include="Net\ChecksumUtils.cpp" />
+    <ClCompile Include="Net\PacketRewriter.cpp" />
+    <ClCompile Include="Utils\HexParser.cpp" />
+    <ClCompile Include="Capture\PacketStore.cpp" />
+    <ClCompile Include="Capture\NotificationDispatcher.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Matilda.rc" />

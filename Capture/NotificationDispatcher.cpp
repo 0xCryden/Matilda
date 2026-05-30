@@ -1,4 +1,4 @@
-#include "Capture/NotificationDispatcher.h"
+#include "NotificationDispatcher.h"
 #include <sstream>
 #include <cstring>
 

@@ -1,4 +1,4 @@
-#include "Capture/PacketStore.h"
+#include "PacketStore.h"
 #include <algorithm>
 
 PacketStore::PacketStore()
@@ -9,7 +9,7 @@ PacketStore::~PacketStore()
 {
     // free RawPacketVector contents if necessary
     std::lock_guard<std::mutex> lk(m_lock);
-    for (int i = 0; i < m_packets.size(); ++i) {
+    for (size_t i = 0; i < m_packets.size(); ++i) {
         pcpp::RawPacket* p = m_packets.at(i);
         if (p) delete p;
     }
@@ -19,7 +19,7 @@ PacketStore::~PacketStore()
 void PacketStore::appendPacket(pcpp::RawPacket* p, const std::vector<std::string>& meta)
 {
     std::lock_guard<std::mutex> lk(m_lock);
-    if (p) m_packets.pushBack(p);
+    if (p) m_packets.push_back(p);
     m_meta.emplace_back(meta);
 }
 
@@ -31,7 +31,7 @@ void PacketStore::appendOutgoing(const std::vector<uint8_t>& frame, const std::v
     if (!rp->setRawData(frame.data(), (int)frame.size(), false, tv, pcpp::LINKTYPE_ETHERNET)) {
         delete rp; return;
     }
-    m_packets.pushBack(rp);
+    m_packets.push_back(rp);
     m_meta.emplace_back(meta);
 }
 
@@ -45,7 +45,7 @@ bool PacketStore::getPacketBytes(size_t index, std::vector<uint8_t>& out) const
 {
     std::lock_guard<std::mutex> lk(m_lock);
     if (index >= m_packets.size()) return false;
-    pcpp::RawPacket* p = m_packets.at((int)index);
+    pcpp::RawPacket* p = m_packets.at(index);
     if (!p) return false;
     const uint8_t* data = p->getRawData();
     int len = p->getRawDataLen();
@@ -65,7 +65,7 @@ pcpp::RawPacket* PacketStore::clonePacket(size_t index) const
 {
     std::lock_guard<std::mutex> lk(m_lock);
     if (index >= m_packets.size()) return nullptr;
-    pcpp::RawPacket* orig = m_packets.at((int)index);
+    pcpp::RawPacket* orig = m_packets.at(index);
     if (!orig) return nullptr;
     try {
         return new pcpp::RawPacket(*orig);
