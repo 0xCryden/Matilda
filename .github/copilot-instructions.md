@@ -7,6 +7,7 @@ NON-NEGOTIABLE RULES:
 - Prefer fixing architecture issues over local patches.
 
 STRUCTURE:
+- Explicit types; avoid auto as much as possible.
 - One class per .h/.cpp; filename must match class name.
 - Folders for different concerns or where they make sense.
 - Functions must be small (< 50 lines). Refactor large functions immediately.
