@@ -37,19 +37,19 @@ private:
     HWND m_deviceCombo;
     HWND m_appCombo;
     HWND m_packetList;
-    HWND m_packetDetail;    // left half of detail area: classic hex dump EDIT
+    HWND m_packetDetail;    // hex dump EDIT (left half of detail area)
 
-    // Right half of detail area: custom owner-drawn parsed-fields panel
+    // Right half of detail area: owner-drawn parsed-fields panel
     HWND m_parsedPanel;
-    HWND m_parsedTooltip;   // TOOLTIPS_CLASS window attached to m_parsedPanel
+    HWND m_parsedTooltip;
 
-    // preview/send row controls (bottom toolbar)
+    // Preview / send row controls (bottom toolbar)
     HWND m_previewProtoCombo;
     HWND m_previewSrcPort;
     HWND m_previewDstIp;
     HWND m_previewDstPort;
     HWND m_previewPayload;
-    HWND m_previewHexCheckbox;
+    // m_previewHexCheckbox removed — payload field interprets hex directly
 
     // Vertical splitter (left log pane | right packet pane)
     int  m_splitPos;
@@ -61,8 +61,8 @@ private:
     int  m_hsplitHeight;
     bool m_hsplitDragging;
 
-    // Vertical splitter inside the detail area (hex view | parsed panel)
-    int  m_detailSplitPos;      // X offset relative to rightX
+    // Vertical splitter inside detail area (hex view | parsed panel)
+    int  m_detailSplitPos;
     int  m_detailSplitWidth;
     bool m_detailSplitDragging;
 
@@ -72,11 +72,10 @@ private:
 
     // Parsed fields for currently selected packet
     std::vector<ParsedField>  m_parsedFields;
-    std::vector<uint8_t>      m_currentBytes;   // raw bytes of selected packet
-    int                       m_hoveredField;   // index into m_parsedFields, -1 = none
-    std::unordered_set<std::string> m_collapsedLayers; // layers whose rows are hidden
+    std::vector<uint8_t>      m_currentBytes;
+    int                       m_hoveredField;
+    std::unordered_set<std::string> m_collapsedLayers;
 
-    // Row height for the parsed panel
     static const int PARSED_ROW_H = 18;
 
     std::unique_ptr<Logger>         m_logger;
@@ -91,6 +90,9 @@ private:
     void OnStartCapture();
     void OnStopCapture();
     void RepositionControls(int clientW, int clientH);
+
+    // Apply current m_theme to all child controls and repaint
+    void ApplyTheme();
 
     // Packet parsing
     static std::vector<ParsedField> ParsePacketFields(const std::vector<uint8_t>& bytes);
