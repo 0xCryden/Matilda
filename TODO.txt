@@ -1,3 +1,5 @@
 - For calculation of the SEQ and ACK numbers we should track the connections' most recent numbers and calculate the right value off of them. Make sure to use the connection from the selected packet. (This was implemented and now needs analyzation if it actually works)
 
 - Also the hex view with the offset/hex/ascii does still not display the ascii-part line starts above each other, currently they are just directly appended (seperated using two spaces) to the hex except for the last row's ascii. Maybe we should make this hex view three columns (offset, hex, ascii) so the line starts are guaranteed to be above each other? Make sure to keep the highlight in the HEX when hovering over an element of the right sides human readable format field. Make sure the line starts of the different columns match
+
+- Components missing themed colors: Buttons, Dropdowns frames, dropdowns button, scrollbar areas, the table, (Eth, Ipv4, TCP) dropdowns from single packet view, window frame and headbar containing the "Settings" menu
