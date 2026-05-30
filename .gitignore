@@ -19,6 +19,7 @@ Debug/
 Release/
 bin/
 lib/
+Matilda/
 
 # Visual Studio files
 *.suo
