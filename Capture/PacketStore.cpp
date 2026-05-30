@@ -60,3 +60,15 @@ bool PacketStore::getMeta(size_t index, std::vector<std::string>& out) const
     out = m_meta[index];
     return true;
 }
+
+pcpp::RawPacket* PacketStore::clonePacket(size_t index) const
+{
+    std::lock_guard<std::mutex> lk(m_lock);
+    if (index >= m_packets.size()) return nullptr;
+    pcpp::RawPacket* orig = m_packets.at((int)index);
+    if (!orig) return nullptr;
+    try {
+        return new pcpp::RawPacket(*orig);
+    }
+    catch (...) { return nullptr; }
+}

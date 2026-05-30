@@ -8,13 +8,13 @@
 // ---------------------------------------------------------------------------
 bool CaptureManager::sendCapturedPacket(size_t index)
 {
-    if (!m_currentDevice || index >= m_capturedPackets.size())
-        return false;
+    if (!m_currentDevice) return false;
+
+    pcpp::RawPacket* rp = m_packetStore.clonePacket(index);
+    if (!rp) return false;
 
     pcpp::RawPacketVector tmp;
-    try { tmp.pushBack(new pcpp::RawPacket(*m_capturedPackets.at((int)index))); }
-    catch (...) { return false; }
-
+    tmp.pushBack(rp);
     return m_currentDevice->sendPackets(tmp) == 1;
 }
 
@@ -36,20 +36,15 @@ bool CaptureManager::sendCapturedPacketWithPayload(
             if (errOut) *errOut = "Capture must be running to send packets";
             return false;
         }
-        if (index >= m_capturedPackets.size())
+        if (index >= m_packetStore.getCount())
         {
             if (errOut) *errOut = "Invalid packet index";
             return false;
         }
 
-        pcpp::RawPacket* orig = m_capturedPackets.at((int)index);
-        if (!orig) { if (errOut) *errOut = "Original packet missing"; return false; }
-
-        const uint8_t* origData = orig->getRawData();
-        int            origLen = orig->getRawDataLen();
-        if (origLen <= 0) { if (errOut) *errOut = "Original packet has zero length"; return false; }
-
-        std::vector<uint8_t> data(origData, origData + origLen);
+        std::vector<uint8_t> data;
+        if (!m_packetStore.getPacketBytes(index, data)) { if (errOut) *errOut = "Original packet missing"; return false; }
+        if (data.empty()) { if (errOut) *errOut = "Original packet has zero length"; return false; }
 
         // --- Ethernet / IPv4 guard ---
         const size_t kEthHdrLen = 14;
@@ -379,21 +374,9 @@ bool CaptureManager::logOutgoingPacket(const std::vector<uint8_t>& frame,
 
     int newIdx = -1;
     try {
-        std::lock_guard<std::mutex> lk(m_capturedLock);
-        pcpp::RawPacket* rp = new pcpp::RawPacket();
-        timeval tv{}; tv.tv_sec = 0; tv.tv_usec = 0;
-        // deleteRawDataAtDestructor=false: realFrame is a local copy on our stack;
-        // handing ownership would cause a double-free when the vector destructs.
-        if (!rp->setRawData(realFrame.data(), (int)realFrame.size(), false, tv,
-            pcpp::LINKTYPE_ETHERNET))
-        {
-            delete rp; return false;
-        }
-        m_capturedPackets.pushBack(rp);
-        newIdx = (int)(m_capturedPackets.size() - 1);
-        if (m_capturedMeta.size() <= (size_t)newIdx)
-            m_capturedMeta.resize(newIdx + 1);
-        m_capturedMeta[newIdx] = meta;
+        m_packetStore.appendOutgoing(realFrame, meta);
+        size_t cnt = m_packetStore.getCount();
+        if (cnt > 0) newIdx = (int)(cnt - 1);
     }
     catch (...) { return false; }
 
@@ -404,6 +387,7 @@ bool CaptureManager::logOutgoingPacket(const std::vector<uint8_t>& frame,
     oss << (usedPlaceholder ? 0 : (int)frame.size()) << '\t';
     oss << "\t---------------------\r\n";
 
+    // If UI window is present, post immediately (keep original behavior for outgoing)
     if (m_uiWindow)
     {
         struct PktMsg { int idx; char* summary; };
@@ -411,7 +395,12 @@ bool CaptureManager::logOutgoingPacket(const std::vector<uint8_t>& frame,
         arr[0].idx = newIdx;
         arr[0].summary = _strdup(oss.str().c_str());
         PostMessageA((HWND)m_uiWindow, WM_APP + 2, (WPARAM)1, (LPARAM)arr);
+        return true;
     }
+
+    // Otherwise, enqueue into notifier (may flush immediately) and mimic prior callback wake
+    bool flushed = m_notifier.enqueue(newIdx, oss.str());
+    if (!flushed && m_callback) m_callback(std::string(), -1);
     return true;
 }
 

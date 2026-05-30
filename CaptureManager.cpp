@@ -50,6 +50,9 @@ bool CaptureManager::start(PacketCallback cb, int deviceIndex, void* uiWindow)
     m_callback = std::move(cb);
     m_running = true;
     m_uiWindow = uiWindow;
+    // Wire notification dispatcher to UI/callback
+    m_notifier.setCallback(m_callback);
+    if (m_uiWindow) m_notifier.setUiWindow((HWND)m_uiWindow);
 
     m_thread = std::thread([this, deviceIndex]()
         {
@@ -88,15 +91,6 @@ bool CaptureManager::start(PacketCallback cb, int deviceIndex, void* uiWindow)
 
                     // Feed raw bytes to the connection tracker before anything else
                     m_connTracker.observe(rawPacket->getRawData(), rawPacket->getRawDataLen());
-
-                    // Store a copy for replay / metadata
-                    int newIdx = -1;
-                    try {
-                        std::lock_guard<std::mutex> lk(m_capturedLock);
-                        m_capturedPackets.pushBack(new pcpp::RawPacket(*rawPacket));
-                        newIdx = (int)(m_capturedPackets.size() - 1);
-                    }
-                    catch (...) {}
 
                     pcpp::Packet packet(rawPacket);
 
@@ -160,8 +154,9 @@ bool CaptureManager::start(PacketCallback cb, int deviceIndex, void* uiWindow)
                         << procName << '\t'
                         << "---------------------\r\n";
 
-                    // Store metadata
-                    {
+                    // Store metadata and packet into PacketStore
+                    int newIdx = -1;
+                    try {
                         std::vector<std::string> meta;
                         meta.push_back(timestr);
                         meta.push_back(direction);
@@ -173,71 +168,17 @@ bool CaptureManager::start(PacketCallback cb, int deviceIndex, void* uiWindow)
                         meta.push_back(std::to_string(len));
                         meta.push_back(procName);
 
-                        std::lock_guard<std::mutex> lk(m_capturedLock);
-                        if (newIdx < 0)
-                            m_capturedMeta.push_back(meta);
-                        else
-                        {
-                            if (m_capturedMeta.size() <= (size_t)newIdx)
-                                m_capturedMeta.resize(newIdx + 1);
-                            m_capturedMeta[newIdx] = meta;
-                        }
+                        pcpp::RawPacket* copy = new pcpp::RawPacket(*rawPacket);
+                        m_packetStore.appendPacket(copy, meta);
+                        size_t cnt = m_packetStore.getCount();
+                        if (cnt > 0) newIdx = (int)(cnt - 1);
                     }
+                    catch (...) { }
 
-                    // Batch UI notifications (max 300 ms or 100 packets between flushes)
-                    {
-                        std::string summary = out.str();
-                        auto now = std::chrono::steady_clock::now();
-                        bool doPost = false;
-                        int  postCount = 0;
-
-                        {
-                            std::lock_guard<std::mutex> lk(m_notifyLock);
-                            m_pendingNotifications.emplace_back(newIdx, summary);
-                            if (m_lastNotify.time_since_epoch().count() == 0)
-                                m_lastNotify = now;
-                            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                now - m_lastNotify).count();
-                            if (ms >= 300 || m_pendingNotifications.size() >= 100)
-                            {
-                                doPost = true;
-                                postCount = (int)m_pendingNotifications.size();
-                            }
-                        }
-
-                        if (doPost)
-                        {
-                            struct PktMsg { int idx; char* summary; };
-                            PktMsg* arr = new PktMsg[postCount];
-                            {
-                                std::lock_guard<std::mutex> lk(m_notifyLock);
-                                for (int i = 0; i < postCount; ++i)
-                                {
-                                    arr[i].idx = m_pendingNotifications[i].first;
-                                    arr[i].summary = _strdup(m_pendingNotifications[i].second.c_str());
-                                }
-                                m_pendingNotifications.erase(
-                                    m_pendingNotifications.begin(),
-                                    m_pendingNotifications.begin() + postCount);
-                                m_lastNotify = now;
-                            }
-
-                            if (m_uiWindow)
-                                PostMessageA((HWND)m_uiWindow, WM_APP + 2, (WPARAM)postCount, (LPARAM)arr);
-                            else
-                            {
-                                std::ostringstream agg;
-                                for (int i = 0; i < postCount; ++i) agg << arr[i].summary << "\n";
-                                if (m_callback) m_callback(agg.str(), -1);
-                                for (int i = 0; i < postCount; ++i) free(arr[i].summary);
-                                delete[] arr;
-                            }
-                        }
-                        else
-                        {
-                            if (m_callback) m_callback(std::string(), -1);
-                        }
-                    }
+                    // Enqueue notification; if not flushed immediately, call callback with empty string like before
+                    std::string summary = out.str();
+                    bool flushed = m_notifier.enqueue(newIdx, summary);
+                    if (!flushed && m_callback) m_callback(std::string(), -1);
                 },
                 nullptr);
 
@@ -360,8 +301,7 @@ DWORD CaptureManager::getPidForUdp(const std::string& srcIp, const std::string& 
 
 size_t CaptureManager::getCapturedCount() const
 {
-    std::lock_guard<std::mutex> lk(m_capturedLock);
-    return m_capturedPackets.size();
+    return m_packetStore.getCount();
 }
 
 bool CaptureManager::setFilter(const std::string& filter)
@@ -372,20 +312,10 @@ bool CaptureManager::setFilter(const std::string& filter)
 
 bool CaptureManager::getCapturedPacketBytes(size_t index, std::vector<uint8_t>& out) const
 {
-    std::lock_guard<std::mutex> lk(m_capturedLock);
-    if (index >= m_capturedPackets.size()) return false;
-    pcpp::RawPacket* p = m_capturedPackets.at((int)index);
-    if (!p) return false;
-    const uint8_t* data = p->getRawData();
-    int len = p->getRawDataLen();
-    out.assign(data, data + len);
-    return true;
+    return m_packetStore.getPacketBytes(index, out);
 }
 
 bool CaptureManager::getCapturedMeta(size_t index, std::vector<std::string>& out) const
 {
-    std::lock_guard<std::mutex> lk(m_capturedLock);
-    if (index >= m_capturedMeta.size()) return false;
-    out = m_capturedMeta[index];
-    return true;
+    return m_packetStore.getMeta(index, out);
 }

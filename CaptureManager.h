@@ -12,6 +12,8 @@
 #include "PcapLiveDevice.h"
 #include "RawPacket.h"
 #include "ConnectionTracker.h"
+#include "Capture/PacketStore.h"
+#include "Capture/NotificationDispatcher.h"
 
 class CaptureManager {
 public:
@@ -61,22 +63,22 @@ private:
     std::atomic<bool>  m_running;
     PacketCallback     m_callback;
 
-    pcpp::RawPacketVector                  m_capturedPackets;
-    std::vector<std::vector<std::string>>  m_capturedMeta;
-    mutable std::mutex                     m_capturedLock;
+    // Thread-safe storage for captured packets and metadata
+    PacketStore                       m_packetStore;
+
+    // Notification batching / dispatch (posts WM_APP+2 or calls callback)
+    NotificationDispatcher            m_notifier;
 
     // The device in use during an active capture session.
-    // Null when capture is not running — sending is only permitted while capturing.
+    // Null when capture is not running - sending is only permitted while capturing.
     pcpp::PcapLiveDevice* m_currentDevice = nullptr;
 
     void* m_uiWindow = nullptr;
 
-    std::vector<std::pair<int, std::string>> m_pendingNotifications;
-    std::chrono::steady_clock::time_point    m_lastNotify;
-    std::mutex                               m_notifyLock;
-
     // Per-connection TCP sequence / acknowledgement tracking
     ConnectionTracker m_connTracker;
+
+    // Private helpers
 
     // Private helpers
     static std::string  getProcessNameByPid(DWORD pid);
@@ -85,5 +87,5 @@ private:
     static DWORD        getPidForUdp(const std::string& srcIp, const std::string& dstIp,
         uint16_t srcPort, uint16_t dstPort);
 
-    void run(); // deprecated — kept for link compatibility
+    void run(); // deprecated ï¿½ kept for link compatibility
 };

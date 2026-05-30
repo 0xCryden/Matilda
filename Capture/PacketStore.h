@@ -22,6 +22,9 @@ public:
     bool getPacketBytes(size_t index, std::vector<uint8_t>& out) const;
     bool getMeta(size_t index, std::vector<std::string>& out) const;
 
+    // Return a new RawPacket allocated by caller; nullptr on error
+    pcpp::RawPacket* clonePacket(size_t index) const;
+
 private:
     mutable std::mutex m_lock;
     pcpp::RawPacketVector m_packets;
