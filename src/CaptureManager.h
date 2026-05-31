@@ -1,19 +1,17 @@
 #pragma once
 
-#include <atomic>
-#include <thread>
 #include <functional>
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <chrono>
-#include <mutex>
+#include <memory>
 
 #include "PcapLiveDevice.h"
 #include "RawPacket.h"
 #include "ConnectionTracker.h"
 #include "Capture/PacketStore.h"
 #include "Capture/NotificationDispatcher.h"
+#include "Capture/CaptureSession.h"
 
 class CaptureManager {
 public:
@@ -59,33 +57,16 @@ public:
     bool   getCapturedMeta(size_t index, std::vector<std::string>& out) const;
 
 private:
-    std::thread        m_thread;
-    std::atomic<bool>  m_running;
-    PacketCallback     m_callback;
-
-    // Thread-safe storage for captured packets and metadata
+    // Composed components for capture and storage
     PacketStore                       m_packetStore;
-
-    // Notification batching / dispatch (posts WM_APP+2 or calls callback)
     NotificationDispatcher            m_notifier;
+    ConnectionTracker                 m_connTracker;
+    std::unique_ptr<CaptureSession>   m_session;
 
     // The device in use during an active capture session.
     // Null when capture is not running - sending is only permitted while capturing.
     pcpp::PcapLiveDevice* m_currentDevice = nullptr;
 
     void* m_uiWindow = nullptr;
-
-    // Per-connection TCP sequence / acknowledgement tracking
-    ConnectionTracker m_connTracker;
-
-    // Private helpers
-
-    // Private helpers
-    static std::string  getProcessNameByPid(DWORD pid);
-    static DWORD        getPidForTcp(const std::string& srcIp, const std::string& dstIp,
-        uint16_t srcPort, uint16_t dstPort);
-    static DWORD        getPidForUdp(const std::string& srcIp, const std::string& dstIp,
-        uint16_t srcPort, uint16_t dstPort);
-
-    void run(); // deprecated � kept for link compatibility
+    PacketCallback m_callback;
 };
