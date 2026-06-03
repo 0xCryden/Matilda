@@ -210,8 +210,6 @@ LRESULT App::HandleMessage(
         int y = GET_Y_LPARAM(lParam);
 
         m_window->OnMouseMove(x, y);
-
-        InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
     }
 

@@ -75,6 +75,8 @@ void UIWindow::OnMouseMove(int mx, int my)
             newHovered->SetState(UIElementState::Hovered);
 
         m_hoveredElement = newHovered;
+
+        InvalidateRect(m_hwnd, nullptr, FALSE);
     }
 }
 
