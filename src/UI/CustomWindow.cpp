@@ -1,6 +1,7 @@
 #include "CustomWindow.h"
 #include <windows.h>
 #include <commctrl.h>
+#include <windowsx.h>
 
 namespace UI {
 
@@ -15,6 +16,23 @@ static LRESULT CALLBACK FramelessSubclassProc(HWND hwnd, UINT msg, WPARAM wParam
     switch (msg)
     {
     case WM_NCCALCSIZE:
+        // Remove standard non-client area so the whole window is client
+        if (wParam)
+        {
+            // Let Windows know we've handled it
+            return 0;
+        }
+        break;
+
+    case WM_NCDESTROY:
+    {
+        // cleanup allocated frameless data
+        if (fd) {
+            RemoveWindowSubclass(hwnd, FramelessSubclassProc, uIdSubclass);
+            delete fd;
+        }
+        break;
+    }
         // Remove standard non-client area so the whole window is client
         if (wParam)
         {
