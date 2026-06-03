@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <unordered_set>
 #include "Themes.h"
+#include "UI\UIButton.h"
 
 class Logger;
 class CaptureManager;
@@ -50,6 +51,12 @@ private:
     HWND m_previewDstIp;
     HWND m_previewDstPort;
     HWND m_previewPayload;
+
+    // Themed owner-drawn buttons (wrappers)
+    std::unique_ptr<UI::UIButton> m_btnStartObj;
+    std::unique_ptr<UI::UIButton> m_btnReplayObj;
+    std::unique_ptr<UI::UIButton> m_btnSendObj;
+    std::unique_ptr<UI::UIButton> m_btnFilterObj;
     // m_previewHexCheckbox removed � payload field interprets hex directly
 
     // Vertical splitter (left log pane | right packet pane)

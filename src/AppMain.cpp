@@ -20,6 +20,8 @@
 
 #include "Logger.h"
 #include "CaptureManager.h"
+#include "UI\UIElement.h"
+#include "UI\UIButton.h"
 
 #define MAX_LOADSTRING 100
 
@@ -294,15 +296,11 @@ void MainApp::ApplyTheme()
 	SetClassLongPtr(m_mainWindow, GCLP_HBRBACKGROUND,
 		(LONG_PTR)CreateSolidBrush(m_theme.bgWindow));
 
-	// Create or update application UI font (Segoe UI, normal weight)
-	static HFONT s_uiFont = nullptr;
-	if (s_uiFont) DeleteObject(s_uiFont);
-	s_uiFont = CreateFontA(-13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+	// Create or update global UI fonts
+	UI::UpdateGlobalFonts(m_theme);
 
-	// Apply the font to common child controls
-	auto applyFont = [&](HWND h) { if (h) SendMessage(h, WM_SETFONT, (WPARAM)s_uiFont, TRUE); };
+	// Apply the font to common child controls (Segoe UI)
+	auto applyFont = [&](HWND h) { if (h) SendMessage(h, WM_SETFONT, (WPARAM)UI::s_uiFont, TRUE); };
 	applyFont(m_outputBox);
 	applyFont(m_packetDetail);
 	applyFont(m_packetList);
@@ -315,6 +313,9 @@ void MainApp::ApplyTheme()
 	applyFont(m_previewDstPort);
 	applyFont(m_previewPayload);
 
+	// Use mono font for packet detail (hex view) for alignment
+	if (m_packetDetail) SendMessage(m_packetDetail, WM_SETFONT, (WPARAM)UI::s_monoFont, TRUE);
+
 	// ListView (packet table) background and text colors
 	if (m_packetList) {
 		ListView_SetBkColor(m_packetList, m_theme.tableBg);
@@ -326,7 +327,7 @@ void MainApp::ApplyTheme()
 		if (hHeader) {
 			SetWindowLongPtr(hHeader, GWLP_USERDATA, (LONG_PTR)this);
 			if (!s_oldHeaderProc) s_oldHeaderProc = (WNDPROC)SetWindowLongPtr(hHeader, GWLP_WNDPROC, (LONG_PTR)HeaderWndProc);
-			SendMessage(hHeader, WM_SETFONT, (WPARAM)s_uiFont, TRUE);
+			SendMessage(hHeader, WM_SETFONT, (WPARAM)UI::s_uiFont, TRUE);
 		}
 	}
 
@@ -813,14 +814,21 @@ int MainApp::Run(int nCmdShow)
 		WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
 		rightX, 10, dcW, 200, hWnd, (HMENU)3, hInst, nullptr);
 
-	CreateWindowA("BUTTON", "Start capture", WS_CHILD | WS_VISIBLE,
-		initialW - 110, 10, 100, 24, hWnd, (HMENU)1, hInst, nullptr);
-	CreateWindowA("BUTTON", "Replay Last", WS_CHILD | WS_VISIBLE,
-		10, 470, 100, 24, hWnd, (HMENU)4, hInst, nullptr);
-	CreateWindowA("BUTTON", "Send Custom", WS_CHILD | WS_VISIBLE,
-		650, 470, 140, 24, hWnd, (HMENU)6, hInst, nullptr);
-	CreateWindowA("BUTTON", "Apply Filter", WS_CHILD | WS_VISIBLE,
-		10, 500, 120, 24, hWnd, (HMENU)8, hInst, nullptr);
+	{
+		RECT r;
+		r.left = initialW - 110; r.top = 10; r.right = r.left + 100; r.bottom = r.top + 24;
+		m_btnStartObj.reset(new UI::UIButton()); m_btnStartObj->Create(hWnd, 1, r); m_btnStartObj->SetText("Start capture");
+
+		r.left = 10; r.top = 470; r.right = r.left + 100; r.bottom = r.top + 24;
+		m_btnReplayObj.reset(new UI::UIButton()); m_btnReplayObj->Create(hWnd, 4, r); m_btnReplayObj->SetText("Replay Last");
+
+		r.left = 650; r.top = 470; r.right = r.left + 140; r.bottom = r.top + 24;
+		m_btnSendObj.reset(new UI::UIButton()); m_btnSendObj->Create(hWnd, 6, r); m_btnSendObj->SetText("Send Custom");
+
+		r.left = 10; r.top = 500; r.right = r.left + 120; r.bottom = r.top + 24;
+		m_btnFilterObj.reset(new UI::UIButton()); m_btnFilterObj->Create(hWnd, 8, r); m_btnFilterObj->SetText("Apply Filter");
+	}
+
 
 	if (!hWnd) return FALSE;
 	ShowWindow(hWnd, nCmdShow);
@@ -1006,6 +1014,13 @@ LRESULT MainApp::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		}
 	}
 	break;
+
+	// Handle owner-draw button painting
+	case WM_DRAWITEM:
+	{
+		UI::UIButton::DrawItem((LPDRAWITEMSTRUCT)lParam);
+		return 0;
+	}
 
 	// ------------------------------------------------------------------
 	// Color the EDIT and COMBOBOX controls with the current theme
