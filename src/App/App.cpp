@@ -227,57 +227,6 @@ LRESULT App::HandleMessage(
 		EndPaint(hwnd, &ps);
 		return 0;
 	}
-	/*
-	case WM_PAINT:
-	{
-		PAINTSTRUCT ps;
-		HDC hdc = BeginPaint(hwnd, &ps);
-
-		RECT rc;
-		GetClientRect(hwnd, &rc);
-
-		int width = rc.right - rc.left;
-		int height = rc.bottom - rc.top;
-
-		// 1. Create back buffer
-		HDC memDC = CreateCompatibleDC(hdc);
-		HBITMAP memBitmap = CreateCompatibleBitmap(hdc, width, height);
-		HGDIOBJ oldBitmap = SelectObject(memDC, memBitmap);
-
-		// 2. Clear background (important!)
-		HBRUSH bg = CreateSolidBrush(RGB(25, 25, 25));
-		FillRect(memDC, &rc, bg);
-		DeleteObject(bg);
-
-		// 3. Draw everything into back buffer
-		m_window->Draw(memDC, m_themeManager.GetTheme());
-
-		// 4. Blit to screen in one go
-		BitBlt(hdc, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
-
-		// 5. Cleanup
-		SelectObject(memDC, oldBitmap);
-		DeleteObject(memBitmap);
-		DeleteDC(memDC);
-
-		EndPaint(hwnd, &ps);
-		return 0;
-	}*/
-	/*case WM_PAINT:
-	{
-		PAINTSTRUCT ps;
-
-		HDC hdc =
-			BeginPaint(hwnd, &ps);
-
-		m_window->Draw(
-			hdc,
-			m_themeManager.GetTheme());
-
-		EndPaint(hwnd, &ps);
-
-		return 0;
-	}*/
 
 	case WM_LBUTTONDOWN:
 	{
