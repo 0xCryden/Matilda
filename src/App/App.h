@@ -21,6 +21,10 @@ public:
         WPARAM wParam,
         LPARAM lParam);
 
+	void ResizeBackBuffer(int w, int h);
+	void InvalidateUIRect(const RECT& r);
+	void AddDirtyRect(const RECT& r);
+
 private:
     bool InitWindow(int nCmdShow);
     void BuildUI();
@@ -35,4 +39,11 @@ private:
     UIEventQueue m_eventQueue;
     AppController m_controller;
     ThemeManager m_themeManager;
+
+    std::vector<RECT> m_dirtyRegions;
+
+    HDC m_memDC = nullptr;
+    HBITMAP m_memBitmap = nullptr;
+    int m_backW = 0;
+    int m_backH = 0;
 };

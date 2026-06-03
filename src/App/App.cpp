@@ -8,293 +8,404 @@
 
 namespace
 {
-    LRESULT CALLBACK WndProc(
-        HWND hwnd,
-        UINT msg,
-        WPARAM wParam,
-        LPARAM lParam)
-    {
-        if (msg == WM_NCCREATE)
-        {
-            CREATESTRUCT* cs =
-                reinterpret_cast<CREATESTRUCT*>(lParam);
+	LRESULT CALLBACK WndProc(
+		HWND hwnd,
+		UINT msg,
+		WPARAM wParam,
+		LPARAM lParam)
+	{
+		if (msg == WM_NCCREATE)
+		{
+			CREATESTRUCT* cs =
+				reinterpret_cast<CREATESTRUCT*>(lParam);
 
-            App* app =
-                static_cast<App*>(cs->lpCreateParams);
+			App* app =
+				static_cast<App*>(cs->lpCreateParams);
 
-            SetWindowLongPtr(
-                hwnd,
-                GWLP_USERDATA,
-                reinterpret_cast<LONG_PTR>(app));
+			SetWindowLongPtr(
+				hwnd,
+				GWLP_USERDATA,
+				reinterpret_cast<LONG_PTR>(app));
 
-            return TRUE;
-        }
+			return TRUE;
+		}
 
-        App* app =
-            reinterpret_cast<App*>(
-                GetWindowLongPtr(hwnd, GWLP_USERDATA));
+		App* app =
+			reinterpret_cast<App*>(
+				GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
-        if (app)
-        {
-            return app->HandleMessage(
-                hwnd,
-                msg,
-                wParam,
-                lParam);
-        }
+		if (app)
+		{
+			return app->HandleMessage(
+				hwnd,
+				msg,
+				wParam,
+				lParam);
+		}
 
-        return DefWindowProc(
-            hwnd,
-            msg,
-            wParam,
-            lParam);
-    }
+		return DefWindowProc(
+			hwnd,
+			msg,
+			wParam,
+			lParam);
+	}
 }
 
 App::App(HINSTANCE hInstance)
-    : m_hInstance(hInstance)
+	: m_hInstance(hInstance)
 {
-    // default configuration lives HERE (not in main)
-    m_themeManager.SetTheme(ThemeType::Dark);
+	// default configuration lives HERE (not in main)
+	m_themeManager.SetTheme(ThemeType::Dark);
 }
 
 App::~App()
 {
-    delete m_window;
+	delete m_window;
 }
 
 int App::Run(int nCmdShow)
 {
-    if (!InitWindow(nCmdShow))
-        return -1;
+	if (!InitWindow(nCmdShow))
+		return -1;
 
-    BuildUI();
+	BuildUI();
 
-    MSG msg = {};
+	MSG msg = {};
 
-    while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+	while (GetMessage(&msg, nullptr, 0, 0))
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
 
-        // EVENT DISPATCH (UI -> Controller)
-        UIEvent e;
-        while (m_eventQueue.Pop(e))
-        {
-            m_controller.HandleEvent(e);
-        }
-    }
+		// EVENT DISPATCH (UI -> Controller)
+		UIEvent e;
+		while (m_eventQueue.Pop(e))
+		{
+			m_controller.HandleEvent(e);
+		}
+	}
 
-    return (int)msg.wParam;
+	return (int)msg.wParam;
 }
 
 bool App::InitWindow(int nCmdShow)
 {
-    WNDCLASS wc = {};
-    wc.lpfnWndProc = WndProc;
-    wc.hInstance = m_hInstance;
-    wc.lpszClassName = Constants::MainWindowClass;
+	WNDCLASS wc = {};
+	wc.lpfnWndProc = WndProc;
+	wc.hInstance = m_hInstance;
+	wc.lpszClassName = Constants::MainWindowClass;
 
-    RegisterClass(&wc);
+	RegisterClass(&wc);
 
-    m_hwnd = CreateWindowEx(
-        0,
-        Constants::MainWindowClass,
-        Constants::AppName,
-        WS_POPUP | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        Constants::DefaultWindowWidth, Constants::DefaultWindowHeight,
-        nullptr,
-        nullptr,
-        m_hInstance,
-        this
-    );
+	m_hwnd = CreateWindowEx(
+		0,
+		Constants::MainWindowClass,
+		Constants::AppName,
+		WS_POPUP | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU,
+		CW_USEDEFAULT, CW_USEDEFAULT,
+		Constants::DefaultWindowWidth, Constants::DefaultWindowHeight,
+		nullptr,
+		nullptr,
+		m_hInstance,
+		this
+	);
 
-    if (!m_hwnd)
-        return false;
+	if (!m_hwnd)
+		return false;
 
-    SetWindowText(m_hwnd, Constants::AppName);
+	SetWindowText(m_hwnd, Constants::AppName);
 
-    HICON icon = (HICON)LoadImage(
-        m_hInstance,
-        MAKEINTRESOURCE(IDI_APPLICATION), // or your custom icon
-        IMAGE_ICON,
-        32, 32,
-        LR_DEFAULTCOLOR
-    );
+	HICON icon = (HICON)LoadImage(
+		m_hInstance,
+		MAKEINTRESOURCE(IDI_APPLICATION), // or your custom icon
+		IMAGE_ICON,
+		32, 32,
+		LR_DEFAULTCOLOR
+	);
 
-    SendMessage(m_hwnd, WM_SETICON, ICON_BIG, (LPARAM)icon);
-    SendMessage(m_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+	SendMessage(m_hwnd, WM_SETICON, ICON_BIG, (LPARAM)icon);
+	SendMessage(m_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
 
-    BOOL value = TRUE;
-    DwmSetWindowAttribute(
-        m_hwnd,
-        DWMWA_NCRENDERING_ENABLED,
-        &value,
-        sizeof(value)
-    );
+	BOOL value = TRUE;
+	DwmSetWindowAttribute(
+		m_hwnd,
+		DWMWA_NCRENDERING_ENABLED,
+		&value,
+		sizeof(value)
+	);
 
-    //MARGINS margins = { -1 };
-    //DwmExtendFrameIntoClientArea(m_hwnd, &margins);
+	//MARGINS margins = { -1 };
+	//DwmExtendFrameIntoClientArea(m_hwnd, &margins);
 
-    ShowWindow(m_hwnd, nCmdShow);
+	ShowWindow(m_hwnd, nCmdShow);
 
-    m_window = new UIWindow(m_hwnd);
-    m_window->SetSize(Constants::DefaultWindowWidth, Constants::DefaultWindowHeight);
+	m_window = new UIWindow(m_hwnd);
+	m_window->SetSize(Constants::DefaultWindowWidth, Constants::DefaultWindowHeight);
 
-    return true;
+	return true;
 }
 
 void App::BuildUI()
 {
-    MainView view(m_window, &m_controller);
+	MainView view(m_window, &m_controller);
 }
 
 LRESULT App::HandleMessage(
-    HWND hwnd,
-    UINT msg,
-    WPARAM wParam,
-    LPARAM lParam)
+	HWND hwnd,
+	UINT msg,
+	WPARAM wParam,
+	LPARAM lParam)
 {
-    switch (msg)
-    {
-    case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hwnd, &ps);
+	switch (msg)
+	{
+	case WM_PAINT:
+	{
+		// TODO: remove InvalidateRect calls and replace with track dirty regions (for now, just redraw everything)
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hwnd, &ps);
 
-        RECT rc;
-        GetClientRect(hwnd, &rc);
+		if (!m_memDC)
+		{
+			EndPaint(hwnd, &ps);
+			return 0;
+		}
 
-        int width = rc.right - rc.left;
-        int height = rc.bottom - rc.top;
+		RECT clientRect;
+		GetClientRect(hwnd, &clientRect);
 
-        // 1. Create back buffer
-        HDC memDC = CreateCompatibleDC(hdc);
-        HBITMAP memBitmap = CreateCompatibleBitmap(hdc, width, height);
-        HGDIOBJ oldBitmap = SelectObject(memDC, memBitmap);
+		const int width = clientRect.right - clientRect.left;
+		const int height = clientRect.bottom - clientRect.top;
 
-        // 2. Clear background (important!)
-        HBRUSH bg = CreateSolidBrush(RGB(25, 25, 25));
-        FillRect(memDC, &rc, bg);
-        DeleteObject(bg);
+		// -----------------------------
+		// 1. Background brush (reuse later ideally)
+		// -----------------------------
+		HBRUSH bgBrush = CreateSolidBrush(RGB(25, 25, 25));
 
-        // 3. Draw everything into back buffer
-        m_window->Draw(memDC, m_themeManager.GetTheme());
+		// -----------------------------
+		// 2. Determine redraw strategy
+		// -----------------------------
+		bool fullRedraw = m_dirtyRegions.empty();
 
-        // 4. Blit to screen in one go
-        BitBlt(hdc, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
+		if (fullRedraw)
+		{
+			// FULL CLEAR (initial load / resize fallback)
+			FillRect(m_memDC, &clientRect, bgBrush);
+		}
+		else
+		{
+			// PARTIAL CLEAR (only dirty regions)
+			for (const RECT& r : m_dirtyRegions)
+			{
+				FillRect(m_memDC, &r, bgBrush);
+			}
+		}
 
-        // 5. Cleanup
-        SelectObject(memDC, oldBitmap);
-        DeleteObject(memBitmap);
-        DeleteDC(memDC);
+		DeleteObject(bgBrush);
 
-        EndPaint(hwnd, &ps);
-        return 0;
-    }
-    /*case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
+		// -----------------------------
+		// 3. Draw UI into backbuffer
+		// -----------------------------
+		m_window->Draw(m_memDC, m_themeManager.GetTheme());
 
-        HDC hdc =
-            BeginPaint(hwnd, &ps);
+		// -----------------------------
+		// 4. Blit to screen
+		// -----------------------------
+		BitBlt(
+			hdc,
+			0, 0,
+			width, height,
+			m_memDC,
+			0, 0,
+			SRCCOPY
+		);
 
-        m_window->Draw(
-            hdc,
-            m_themeManager.GetTheme());
+		// -----------------------------
+		// 5. Clear dirty regions AFTER render
+		// -----------------------------
+		m_dirtyRegions.clear();
 
-        EndPaint(hwnd, &ps);
+		EndPaint(hwnd, &ps);
+		return 0;
+	}
+	/*
+	case WM_PAINT:
+	{
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hwnd, &ps);
 
-        return 0;
-    }*/
+		RECT rc;
+		GetClientRect(hwnd, &rc);
 
-    case WM_LBUTTONDOWN:
-    {
-        int x = GET_X_LPARAM(lParam);
-        int y = GET_Y_LPARAM(lParam);
+		int width = rc.right - rc.left;
+		int height = rc.bottom - rc.top;
 
-        m_window->OnMouseDown(
-            x,
-            y,
-            m_eventQueue);
+		// 1. Create back buffer
+		HDC memDC = CreateCompatibleDC(hdc);
+		HBITMAP memBitmap = CreateCompatibleBitmap(hdc, width, height);
+		HGDIOBJ oldBitmap = SelectObject(memDC, memBitmap);
 
-        InvalidateRect(
-            hwnd,
-            nullptr,
-            TRUE);
+		// 2. Clear background (important!)
+		HBRUSH bg = CreateSolidBrush(RGB(25, 25, 25));
+		FillRect(memDC, &rc, bg);
+		DeleteObject(bg);
 
-        return 0;
-    }
+		// 3. Draw everything into back buffer
+		m_window->Draw(memDC, m_themeManager.GetTheme());
 
-    case WM_LBUTTONUP:
-    {
-        int x = GET_X_LPARAM(lParam);
-        int y = GET_Y_LPARAM(lParam);
+		// 4. Blit to screen in one go
+		BitBlt(hdc, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
 
-        m_window->OnMouseUp(
-            x,
-            y,
-            m_eventQueue);
-        return 0;
-    }
+		// 5. Cleanup
+		SelectObject(memDC, oldBitmap);
+		DeleteObject(memBitmap);
+		DeleteDC(memDC);
 
-    case WM_MOUSEMOVE:
-    {
-        int x = GET_X_LPARAM(lParam);
-        int y = GET_Y_LPARAM(lParam);
+		EndPaint(hwnd, &ps);
+		return 0;
+	}*/
+	/*case WM_PAINT:
+	{
+		PAINTSTRUCT ps;
 
-        m_window->OnMouseMove(x, y);
-        return 0;
-    }
+		HDC hdc =
+			BeginPaint(hwnd, &ps);
 
-    case WM_DESTROY:
-    {
-        PostQuitMessage(0);
-        return 0;
-    }
-    
-    case WM_NCHITTEST:
-    {
-        const int border = Constants::WindowBorderThickness;
+		m_window->Draw(
+			hdc,
+			m_themeManager.GetTheme());
 
-        POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-        ScreenToClient(hwnd, &pt);
+		EndPaint(hwnd, &ps);
 
-        RECT rc;
-        GetClientRect(hwnd, &rc);
+		return 0;
+	}*/
 
-        bool left = pt.x < border;
-        bool right = pt.x > rc.right - border;
-        bool top = pt.y < border;
-        bool bottom = pt.y > rc.bottom - border;
+	case WM_LBUTTONDOWN:
+	{
+		int x = GET_X_LPARAM(lParam);
+		int y = GET_Y_LPARAM(lParam);
 
-        if (top && left) return HTTOPLEFT;
-        if (top && right) return HTTOPRIGHT;
-        if (bottom && left) return HTBOTTOMLEFT;
-        if (bottom && right) return HTBOTTOMRIGHT;
-        if (left) return HTLEFT;
-        if (right) return HTRIGHT;
-        if (top) return HTTOP;
-        if (bottom) return HTBOTTOM;
+		m_window->OnMouseDown(
+			x,
+			y,
+			m_eventQueue);
 
-        return HTCLIENT;
-    }
-    
-    case WM_GETMINMAXINFO:
-    {
-        MINMAXINFO* mmi = (MINMAXINFO*)lParam;
+		InvalidateRect(
+			hwnd,
+			nullptr,
+			TRUE);
 
-        mmi->ptMinTrackSize.x = 400;
-        mmi->ptMinTrackSize.y = 300;
+		return 0;
+	}
 
-        return 0;
-    }
-    }
+	case WM_LBUTTONUP:
+	{
+		int x = GET_X_LPARAM(lParam);
+		int y = GET_Y_LPARAM(lParam);
 
-    return DefWindowProc(
-        hwnd,
-        msg,
-        wParam,
-        lParam);
+		m_window->OnMouseUp(
+			x,
+			y,
+			m_eventQueue);
+		return 0;
+	}
+
+	case WM_MOUSEMOVE:
+	{
+		int x = GET_X_LPARAM(lParam);
+		int y = GET_Y_LPARAM(lParam);
+
+		m_window->OnMouseMove(x, y);
+		return 0;
+	}
+
+	case WM_DESTROY:
+	{
+		PostQuitMessage(0);
+		return 0;
+	}
+
+	case WM_NCHITTEST:
+	{
+		const int border = Constants::WindowBorderThickness;
+
+		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+		ScreenToClient(hwnd, &pt);
+
+		RECT rc;
+		GetClientRect(hwnd, &rc);
+
+		bool left = pt.x < border;
+		bool right = pt.x > rc.right - border;
+		bool top = pt.y < border;
+		bool bottom = pt.y > rc.bottom - border;
+
+		if (top && left) return HTTOPLEFT;
+		if (top && right) return HTTOPRIGHT;
+		if (bottom && left) return HTBOTTOMLEFT;
+		if (bottom && right) return HTBOTTOMRIGHT;
+		if (left) return HTLEFT;
+		if (right) return HTRIGHT;
+		if (top) return HTTOP;
+		if (bottom) return HTBOTTOM;
+
+		return HTCLIENT;
+	}
+
+	case WM_GETMINMAXINFO:
+	{
+		MINMAXINFO* mmi = (MINMAXINFO*)lParam;
+
+		mmi->ptMinTrackSize.x = 400;
+		mmi->ptMinTrackSize.y = 300;
+
+		return 0;
+	}
+
+	case WM_SIZE:
+	{
+		int w = LOWORD(lParam);
+		int h = HIWORD(lParam);
+
+		ResizeBackBuffer(w, h);
+		InvalidateRect(hwnd, nullptr, FALSE);
+
+		return 0;
+	}
+	}
+
+	return DefWindowProc(
+		hwnd,
+		msg,
+		wParam,
+		lParam);
+}
+
+void App::InvalidateUIRect(const RECT& r)
+{
+	InvalidateRect(m_hwnd, &r, FALSE);
+}
+
+void App::AddDirtyRect(const RECT& r)
+{
+	m_dirtyRegions.push_back(r);
+}
+
+void App::ResizeBackBuffer(int w, int h)
+{
+	if (m_memDC)
+	{
+		DeleteObject(m_memBitmap);
+		DeleteDC(m_memDC);
+	}
+
+	HDC hdc = GetDC(m_hwnd);
+
+	m_memDC = CreateCompatibleDC(hdc);
+	m_memBitmap = CreateCompatibleBitmap(hdc, w, h);
+	SelectObject(m_memDC, m_memBitmap);
+
+	ReleaseDC(m_hwnd, hdc);
+
+	m_backW = w;
+	m_backH = h;
 }
