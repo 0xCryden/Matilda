@@ -57,6 +57,14 @@ private:
     std::unique_ptr<UI::UIButton> m_btnReplayObj;
     std::unique_ptr<UI::UIButton> m_btnSendObj;
     std::unique_ptr<UI::UIButton> m_btnFilterObj;
+
+    // Custom scrollbars for parsed panel and packet detail
+    std::unique_ptr<UI::UIScrollbar> m_parsedScrollbarObj;
+    std::unique_ptr<UI::UIScrollbar> m_packetDetailScrollbarObj;
+
+    // Settings menu stored for headbar popup
+    HMENU m_settingsMenu;
+    int m_headbarHeight;
     // m_previewHexCheckbox removed � payload field interprets hex directly
 
     // Vertical splitter (left log pane | right packet pane)

@@ -729,7 +729,7 @@ int MainApp::Run(int nCmdShow)
 	// Enable frameless client-drawn chrome with themed headbar region (40px)
 	UI::EnableFrameless(m_mainWindow, 40);
 
-	// Menu: Settings > Theme > White / Dark
+	// Menu: Settings > Theme > White / Dark (store for headbar popup)
 	{
 		HMENU hTheme = CreatePopupMenu();
 		AppendMenuW(hTheme, MF_STRING, IDM_THEME_WHITE, L"White");
@@ -738,10 +738,11 @@ int MainApp::Run(int nCmdShow)
 		AppendMenuW(hSettings, MF_POPUP, (UINT_PTR)hTheme, L"Theme");
 		HMENU hMenuBar = CreateMenu();
 		AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hSettings, L"Settings");
-		SetMenu(hWnd, hMenuBar);
+		m_settingsMenu = hMenuBar; // don't attach as traditional menu: we'll show from headbar
 	}
 
 	const int margin = 10, topArea = 40;
+	m_headbarHeight = topArea;
 	const int initialW = 800, leftW = 200;
 	const int rightX = margin + leftW + margin, rightW = initialW - rightX - margin;
 
@@ -760,6 +761,7 @@ int MainApp::Run(int nCmdShow)
 	m_previewProtoCombo = CreateWindowExA(WS_EX_CLIENTEDGE, "COMBOBOX", "",
 		WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL,
 		0, 0, 80, 200, hWnd, (HMENU)12, hInst, nullptr);
+	if (m_previewProtoCombo) UI::UIComboDecorator::Install(m_previewProtoCombo);
 	if (m_previewProtoCombo) {
 		SendMessageA(m_previewProtoCombo, CB_ADDSTRING, 0, (LPARAM)"TCP");
 		SendMessageA(m_previewProtoCombo, CB_ADDSTRING, 0, (LPARAM)"UDP");
@@ -792,6 +794,8 @@ int MainApp::Run(int nCmdShow)
 		rightX + rightW / 2 + m_detailSplitWidth, topArea + 360, rightW / 2, 120,
 		hWnd, (HMENU)18, hInst, this);
 
+	// Create themed scrollbars for parsed panel and packet detail (right side)	{		RECT srect; srect.left = rightX + rightW/2 + m_detailSplitWidth + (rightW/2) - 16; srect.top = topArea + 360; srect.right = srect.left + 16; srect.bottom = srect.top + 120;		m_parsedScrollbarObj.reset(new UI::UIScrollbar());		m_parsedScrollbarObj->Create(hWnd, 200, srect);		m_parsedScrollbarObj->SetTarget(m_parsedPanel);	}	{		RECT srect2; srect2.left = rightX + (rightW/2) - 16; srect2.top = topArea + 360; srect2.right = srect2.left + 16; srect2.bottom = srect2.top + 120;		m_packetDetailScrollbarObj.reset(new UI::UIScrollbar());		m_packetDetailScrollbarObj->Create(hWnd, 201, srect2);		m_packetDetailScrollbarObj->SetTarget(m_packetDetail);	}
+
 	// Tooltip for parsed panel
 	m_parsedTooltip = CreateWindowEx(0, TOOLTIPS_CLASS, nullptr,
 		WS_POPUP | TTS_ALWAYSTIP | TTS_BALLOON,
@@ -811,11 +815,13 @@ int MainApp::Run(int nCmdShow)
 	m_appCombo = CreateWindowA("COMBOBOX", "All Applications",
 		WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
 		margin, 10, leftW, 200, hWnd, (HMENU)11, hInst, nullptr);
+	if (m_appCombo) UI::UIComboDecorator::Install(m_appCombo);
 
 	int dcW = rightW - 120; if (dcW < 120)dcW = 120;
 	m_deviceCombo = CreateWindowA("COMBOBOX", "",
 		WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
 		rightX, 10, dcW, 200, hWnd, (HMENU)3, hInst, nullptr);
+	if (m_deviceCombo) UI::UIComboDecorator::Install(m_deviceCombo);
 
 	{
 		RECT r;
@@ -1149,6 +1155,16 @@ LRESULT MainApp::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 				RECT headRect = { client.left, client.top, client.right, client.top + topArea };
 				HBRUSH headBrush = CreateSolidBrush(m_theme.headbarBg); FillRect(hdc, &headRect, headBrush); DeleteObject(headBrush);
 
+				// Draw Settings label on left of headbar
+				SetTextColor(hdc, m_theme.textColor);
+				SetBkMode(hdc, TRANSPARENT);
+				HFONT oldF = (HFONT)SelectObject(hdc, UI::s_uiFont);
+				RECT settingsRect = { client.left + 10, client.top + 8, client.left + 150, client.top + topArea - 8 };		DrawTextA(hdc, "Settings", -1, &settingsRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+				SelectObject(hdc, oldF);
+
+				// Draw window control buttons on right (min, max, close)		int btnW = 40; int btnH = topArea - 8; int bx = client.right - 10 - btnW;		RECT cb = { bx, client.top + 4, bx + btnW, client.top + 4 + btnH };		// Close button (red tint)		RECT closeRect = cb; closeRect.left = client.right - 10 - btnW; closeRect.right = client.right - 10; HBRUSH cbg = CreateSolidBrush(m_theme.bgButton); FillRect(hdc, &closeRect, cbg); DeleteObject(cbg);		SetTextColor(hdc, m_theme.textColor);		DrawTextA(hdc, "X", -1, &closeRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+				// Maximize and Minimize to the left of close		RECT maxRect = { closeRect.left - btnW - 4, closeRect.top, closeRect.left - 4, closeRect.bottom };		RECT minRect = { maxRect.left - btnW - 4, closeRect.top, maxRect.left - 4, closeRect.bottom };		HBRUSH bb = CreateSolidBrush(m_theme.bgButton); FillRect(hdc, &maxRect, bb); FillRect(hdc, &minRect, bb); DeleteObject(bb);		DrawTextA(hdc, "[]", -1, &maxRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);		DrawTextA(hdc, "_", -1, &minRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
 				RECT mainRect = { client.left, client.top + topArea, client.right, client.bottom };
 				HBRUSH bgBrush = CreateSolidBrush(m_theme.bgWindow); FillRect(hdc, &mainRect, bgBrush); DeleteObject(bgBrush);
 
@@ -1400,11 +1416,16 @@ LRESULT MainApp::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	break;
 
 	case WM_LBUTTONUP:
+	{
 		if (m_vsplitDragging || m_hsplitDragging || m_detailSplitDragging) {
 			m_vsplitDragging = m_hsplitDragging = m_detailSplitDragging = false;
 			ReleaseCapture();
+			break;
 		}
-		break;
+		// Headbar click handling: settings and window buttons
+		int mx = LOWORD(lParam), my = HIWORD(lParam);		if (my >= 0 && my < m_headbarHeight)		{			RECT rc; GetClientRect(hWnd, &rc);			int btnW = 40; int bxCloseR = rc.right - 10; int bxCloseL = bxCloseR - btnW;			int bxMaxL = bxCloseL - 4 - btnW; int bxMinL = bxMaxL - 4 - btnW;			// Close			if (mx >= bxCloseL && mx <= bxCloseR) { PostMessage(hWnd, WM_CLOSE, 0, 0); break; }			// Maximize/Restore			if (mx >= bxMaxL && mx < bxCloseL) { if (IsZoomed(hWnd)) ShowWindow(hWnd, SW_RESTORE); else ShowWindow(hWnd, SW_MAXIMIZE); break; }			// Minimize			if (mx >= bxMinL && mx < bxMaxL) { ShowWindow(hWnd, SW_MINIMIZE); break; }			// Settings area (left)			if (mx >= 10 && mx < 200)			{				if (m_settingsMenu) {					POINT pt; pt.x = mx; pt.y = my; ClientToScreen(hWnd, &pt);					HMENU submenu = GetSubMenu(m_settingsMenu, 0);					if (submenu) TrackPopupMenu(submenu, TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y + m_headbarHeight, 0, hWnd, NULL);				}				break;			}		}		break;
+	}
+
 
 	case WM_DESTROY:
 		PostQuitMessage(0);
