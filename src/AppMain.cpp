@@ -147,8 +147,8 @@ void MainApp::PaintParsedPanel(HDC hdc, const RECT& rc)
 
 	HFONT monoFont = CreateFontA(-13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-		CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas");
-	HFONT hdrFont = CreateFontA(-12, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+	HFONT hdrFont = CreateFontA(-12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
 
@@ -170,18 +170,21 @@ void MainApp::PaintParsedPanel(HDC hdc, const RECT& rc)
 			if (y + rowH > rc.top && y < rc.bottom)
 			{
 				RECT headerRect = { rc.left, y, rc.right, y + rowH };
-				// Use slightly tinted variants of the theme bg for layer headers
+				// Use tinted variants of the theme splitterBg for layer headers
+				auto brighten = [&](COLORREF c, int d) {
+					return RGB(min(255, (int)GetRValue(c) + d), min(255, (int)GetGValue(c) + d), min(255, (int)GetBValue(c) + d));
+				};
 				COLORREF hdrColor =
-					(f.layerTag == "ETH") ? RGB(210, 228, 255) :
-					(f.layerTag == "IP") ? RGB(210, 255, 215) :
-					(f.layerTag == "TCP") ? RGB(255, 235, 210) :
-					(f.layerTag == "UDP") ? RGB(255, 215, 230) :
-					RGB(230, 230, 230);
+					(f.layerTag == "ETH") ? brighten(m_theme.splitterBg, 30) :
+					(f.layerTag == "IP") ? brighten(m_theme.splitterBg, 20) :
+					(f.layerTag == "TCP") ? brighten(m_theme.splitterBg, 10) :
+					(f.layerTag == "UDP") ? brighten(m_theme.splitterBg, 15) :
+					brighten(m_theme.splitterBg, 8);
 				HBRUSH hdrBrush = CreateSolidBrush(hdrColor);
 				FillRect(hdc, &headerRect, hdrBrush);
 				DeleteObject(hdrBrush);
 				SelectObject(hdc, hdrFont);
-				SetTextColor(hdc, RGB(40, 40, 40));
+				SetTextColor(hdc, m_theme.textColor);
 				SetBkMode(hdc, TRANSPARENT);
 				std::string hdrText = std::string(collapsed ? "> " : "v ") + f.layerTag;
 				TextOutA(hdc, rc.left + 4, y + 2, hdrText.c_str(), (int)hdrText.size());
@@ -283,18 +286,42 @@ void MainApp::ApplyTheme()
 {
 	if (!m_mainWindow) return;
 
-	// Main window background
+	// Main window background (class brush)
 	SetClassLongPtr(m_mainWindow, GCLP_HBRBACKGROUND,
 		(LONG_PTR)CreateSolidBrush(m_theme.bgWindow));
 
-	// Helper: set EDIT/COMBOBOX/LISTVIEW colors via WM_CTLCOLOR* in WM_PAINT is complex;
-	// the simplest reliable approach for child EDITs is to subclass, but we instead
-	// use SetWindowTheme to opt out of theming and then handle WM_CTLCOLOREDIT in the
-	// parent window proc (see HandleMessage). Here we just invalidate everything so
-	// WM_CTLCOLOR* messages are re-sent.
-	InvalidateRect(m_mainWindow, nullptr, TRUE);
+	// Create or update application UI font (Segoe UI, normal weight)
+	static HFONT s_uiFont = nullptr;
+	if (s_uiFont) DeleteObject(s_uiFont);
+	s_uiFont = CreateFontA(-13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+		CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
 
-	// Force EDIT controls to repaint immediately with new colors
+	// Apply the font to common child controls
+	auto applyFont = [&](HWND h) { if (h) SendMessage(h, WM_SETFONT, (WPARAM)s_uiFont, TRUE); };
+	applyFont(m_outputBox);
+	applyFont(m_packetDetail);
+	applyFont(m_packetList);
+	applyFont(m_parsedPanel);
+	applyFont(m_deviceCombo);
+	applyFont(m_appCombo);
+	applyFont(m_previewProtoCombo);
+	applyFont(m_previewSrcPort);
+	applyFont(m_previewDstIp);
+	applyFont(m_previewDstPort);
+	applyFont(m_previewPayload);
+
+	// ListView (packet table) background and text colors
+	if (m_packetList) {
+		ListView_SetBkColor(m_packetList, m_theme.tableBg);
+		ListView_SetTextColor(m_packetList, m_theme.textColor);
+	}
+
+	// Ensure common controls repaint to pick up new colors and brushes handled by WM_CTLCOLOR*
+	InvalidateRect(m_mainWindow, nullptr, TRUE);
+	UpdateWindow(m_mainWindow);
+
+	// Force EDIT/COMBOBOX/OTHER controls to repaint immediately with new colors
 	auto repaint = [](HWND h) { if (h) { InvalidateRect(h, nullptr, TRUE); UpdateWindow(h); } };
 	repaint(m_outputBox);
 	repaint(m_packetDetail);
@@ -972,31 +999,31 @@ LRESULT MainApp::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	{
 		HDC hdcCtrl = (HDC)wParam;
 		SetTextColor(hdcCtrl, m_theme.textColor);
-		SetBkColor(hdcCtrl, m_theme.bgWindow);
-		// Return a brush with the background color — Windows uses it to fill the control bg
+			SetBkColor(hdcCtrl, m_theme.dropdownBg);
+			// Return a brush with the dropdown/edit background color
 		static HBRUSH s_editBrush = nullptr;
 		if (s_editBrush) DeleteObject(s_editBrush);
-		s_editBrush = CreateSolidBrush(m_theme.bgWindow);
+			s_editBrush = CreateSolidBrush(m_theme.dropdownBg);
 		return (LRESULT)s_editBrush;
 	}
 	case WM_CTLCOLORLISTBOX:
 	{
 		HDC hdcCtrl = (HDC)wParam;
 		SetTextColor(hdcCtrl, m_theme.textColor);
-		SetBkColor(hdcCtrl, m_theme.bgWindow);
+			SetBkColor(hdcCtrl, m_theme.dropdownBg);
 		static HBRUSH s_lbBrush = nullptr;
 		if (s_lbBrush) DeleteObject(s_lbBrush);
-		s_lbBrush = CreateSolidBrush(m_theme.bgWindow);
+			s_lbBrush = CreateSolidBrush(m_theme.dropdownBg);
 		return (LRESULT)s_lbBrush;
 	}
 	case WM_CTLCOLORBTN:
 	{
 		HDC hdcCtrl = (HDC)wParam;
 		SetTextColor(hdcCtrl, m_theme.textColor);
-		SetBkColor(hdcCtrl, m_theme.bgWindow);
+			SetBkColor(hdcCtrl, m_theme.bgButton);
 		static HBRUSH s_btnBrush = nullptr;
 		if (s_btnBrush) DeleteObject(s_btnBrush);
-		s_btnBrush = CreateSolidBrush(m_theme.bgWindow);
+			s_btnBrush = CreateSolidBrush(m_theme.bgButton);
 		return (LRESULT)s_btnBrush;
 	}
 
@@ -1084,10 +1111,12 @@ LRESULT MainApp::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		int rightX = m_splitPos + m_splitWidth;
 		int rightW = client.right - rightX - 10;
 
-		// Fill background
-		HBRUSH bgBrush = CreateSolidBrush(m_theme.bgWindow);
-		FillRect(hdc, &client, bgBrush);
-		DeleteObject(bgBrush);
+				// Headbar (top area) and main background
+				RECT headRect = { client.left, client.top, client.right, client.top + topArea };
+				HBRUSH headBrush = CreateSolidBrush(m_theme.headbarBg); FillRect(hdc, &headRect, headBrush); DeleteObject(headBrush);
+
+				RECT mainRect = { client.left, client.top + topArea, client.right, client.bottom };
+				HBRUSH bgBrush = CreateSolidBrush(m_theme.bgWindow); FillRect(hdc, &mainRect, bgBrush); DeleteObject(bgBrush);
 
 		// All splitters: thin coloured line centred in a narrow margin strip.
 		// The margin is filled with splitterBg; a 1-px line in splitterLine
