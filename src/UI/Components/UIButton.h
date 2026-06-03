@@ -1,4 +1,21 @@
 #pragma once
+#include "UIElement.h"
+#include <string>
+
+class UIButton : public UIElement
+{
+public:
+    UIButton(int x, int y, int w, int h, int id, const wchar_t* text);
+
+    void Draw(HDC hdc, UITheme* theme) override;
+
+    void OnMouseDown(int mx, int my, UIEventQueue& events) override;
+
+private:
+    std::wstring m_text;
+};
+
+/*#pragma once
 
 #include "UIElement.h"
 #include <string>
@@ -19,3 +36,4 @@ public:
 };
 
 } // namespace UI
+*/

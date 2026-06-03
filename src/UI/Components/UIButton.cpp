@@ -1,4 +1,30 @@
 #include "UIButton.h"
+#include "../UITheme.h"
+#include "../UIEventQueue.h"
+
+UIButton::UIButton(int x, int y, int w, int h, int id, const wchar_t* text)
+    : UIElement(x, y, w, h, id), m_text(text)
+{
+}
+
+void UIButton::Draw(HDC hdc, UITheme* theme)
+{
+    UIRect r{ m_x, m_y, m_w, m_h };
+
+    theme->DrawButton(
+        hdc,
+        r,
+        m_text.c_str(),
+        (int)m_state
+    );
+}
+
+void UIButton::OnMouseDown(int mx, int my, UIEventQueue& events)
+{
+    events.Push({ UICommand::ButtonClicked, m_id });
+}
+
+/*#include "UIButton.h"
 #include "../AppMain.h"
 #include <string>
 
@@ -79,3 +105,4 @@ void UIButton::DrawItem(LPDRAWITEMSTRUCT dis)
 }
 
 } // namespace UI
+*/

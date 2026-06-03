@@ -9,8 +9,8 @@ public:
     UIScrollbar();
     virtual ~UIScrollbar();
 
-    HWND Create(HWND parent, int id, RECT rc) override;
-    void Destroy() override;
+    HWND Create(HWND parent, int id, RECT rc) /*override*/;
+    void Destroy() /*override*/;
 
     void SetRange(int min, int max, int page);
     void SetPosition(int pos);

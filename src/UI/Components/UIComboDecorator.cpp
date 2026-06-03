@@ -1,4 +1,4 @@
-#include "UIComboDecorator.h"
+/*#include "UIComboDecorator.h"
 #include "../AppMain.h"
 #include <commctrl.h>
 #include <windowsx.h>
@@ -56,3 +56,4 @@ bool UIComboDecorator::Install(HWND combo)
 }
 
 } // namespace UI
+*/

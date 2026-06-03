@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 
 #include <windows.h>
 #include <commctrl.h>
@@ -126,4 +126,4 @@ private:
 
     static LRESULT CALLBACK StaticWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
     static LRESULT CALLBACK StaticParsedPanelProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-};
+};*/

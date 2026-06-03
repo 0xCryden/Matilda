@@ -1,4 +1,4 @@
-#include "CustomWindow.h"
+/*#include "CustomWindow.h"
 #include <windows.h>
 #include <commctrl.h>
 #include <windowsx.h>
@@ -102,3 +102,4 @@ bool EnableFrameless(HWND hwnd, int headbarHeight)
 }
 
 } // namespace UI
+*/

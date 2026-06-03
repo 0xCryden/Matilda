@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 
 #include <windows.h>
 
@@ -10,3 +10,4 @@ namespace UI {
 bool EnableFrameless(HWND hwnd, int headbarHeight);
 
 } // namespace UI
+*/

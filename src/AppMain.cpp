@@ -1,5 +1,5 @@
 // AppMain.cpp - main application class
-#include "framework.h"
+/*#include "framework.h"
 #include "resource.h"
 #include "AppMain.h"
 
@@ -28,6 +28,8 @@
 #define MAX_LOADSTRING 100
 
 #include "Utils/HexParser.h"
+#include "App.h"
+#include "App/App.h"
 
 // File-scope helpers
 static WNDPROC s_oldHeaderProc = nullptr;
@@ -36,7 +38,7 @@ static LRESULT CALLBACK HeaderWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 // ---------------------------------------------------------------------------
 // Packet field parser — Ethernet / IPv4 / TCP / UDP
 // ---------------------------------------------------------------------------
-/*static*/
+// static
 std::vector<ParsedField> MainApp::ParsePacketFields(const std::vector<uint8_t>& b)
 {
 	std::vector<ParsedField> fields;
@@ -350,7 +352,7 @@ void MainApp::ApplyTheme()
 // ---------------------------------------------------------------------------
 // Parsed panel window proc — static trampoline
 // ---------------------------------------------------------------------------
-/*static*/
+//
 LRESULT CALLBACK MainApp::StaticParsedPanelProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	MainApp* pThis = nullptr;
@@ -719,6 +721,9 @@ MainApp::MainApp(HINSTANCE hInstance)
 	, m_splitPos(0), m_splitWidth(8), m_vsplitDragging(false)
 	, m_hsplitPos(0), m_hsplitHeight(6), m_hsplitDragging(false)
 {
+	// Start Capture manager
+	// Create ui main window and controls
+	// Run()
 }
 
 int MainApp::Run(int nCmdShow)
@@ -1523,6 +1528,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
+
 	MainApp app(hInstance);
 	return app.Run(nCmdShow);
-}
+}*/
