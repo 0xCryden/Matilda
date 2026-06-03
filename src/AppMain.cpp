@@ -22,6 +22,7 @@
 #include "CaptureManager.h"
 #include "UI\UIElement.h"
 #include "UI\UIButton.h"
+#include "UI\CustomWindow.h"
 
 #define MAX_LOADSTRING 100
 
@@ -725,6 +726,8 @@ int MainApp::Run(int nCmdShow)
 	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, 0, 800, 600, nullptr, nullptr, hInst, this);
 	m_mainWindow = hWnd;
+	// Enable frameless client-drawn chrome with themed headbar region (40px)
+	UI::EnableFrameless(m_mainWindow, 40);
 
 	// Menu: Settings > Theme > White / Dark
 	{
