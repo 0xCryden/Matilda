@@ -25,6 +25,7 @@ class MainApp {
 public:
     MainApp(HINSTANCE hInstance);
     int Run(int nCmdShow);
+    const Theme& GetTheme() const { return m_theme; }
 
 private:
     HINSTANCE hInst;
@@ -49,7 +50,7 @@ private:
     HWND m_previewDstIp;
     HWND m_previewDstPort;
     HWND m_previewPayload;
-    // m_previewHexCheckbox removed — payload field interprets hex directly
+    // m_previewHexCheckbox removed ï¿½ payload field interprets hex directly
 
     // Vertical splitter (left log pane | right packet pane)
     int  m_splitPos;

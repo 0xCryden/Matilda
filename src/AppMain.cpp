@@ -25,6 +25,10 @@
 
 #include "Utils/HexParser.h"
 
+// File-scope helpers
+static WNDPROC s_oldHeaderProc = nullptr;
+static LRESULT CALLBACK HeaderWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 // ---------------------------------------------------------------------------
 // Packet field parser — Ethernet / IPv4 / TCP / UDP
 // ---------------------------------------------------------------------------
@@ -315,6 +319,15 @@ void MainApp::ApplyTheme()
 	if (m_packetList) {
 		ListView_SetBkColor(m_packetList, m_theme.tableBg);
 		ListView_SetTextColor(m_packetList, m_theme.textColor);
+		SendMessage(m_packetList, LVM_SETTEXTBKCOLOR, 0, (LPARAM)m_theme.tableBg);
+		SendMessage(m_packetList, LVM_SETTEXTCOLOR, 0, (LPARAM)m_theme.textColor);
+		// Subclass header to paint background and apply font
+		HWND hHeader = ListView_GetHeader(m_packetList);
+		if (hHeader) {
+			SetWindowLongPtr(hHeader, GWLP_USERDATA, (LONG_PTR)this);
+			if (!s_oldHeaderProc) s_oldHeaderProc = (WNDPROC)SetWindowLongPtr(hHeader, GWLP_WNDPROC, (LONG_PTR)HeaderWndProc);
+			SendMessage(hHeader, WM_SETFONT, (WPARAM)s_uiFont, TRUE);
+		}
 	}
 
 	// Ensure common controls repaint to pick up new colors and brushes handled by WM_CTLCOLOR*
@@ -833,6 +846,9 @@ int MainApp::Run(int nCmdShow)
 	RECT rc; GetClientRect(hWnd, &rc);
 	RepositionControls(rc.right, rc.bottom);
 
+	// Apply theme now that controls exist
+	ApplyTheme();
+
 	if (m_appCombo) {
 		SendMessageA(m_appCombo, CB_ADDSTRING, 0, (LPARAM)"All Applications");
 		SendMessageA(m_appCombo, CB_SETCURSEL, 0, 0);
@@ -1166,7 +1182,28 @@ LRESULT MainApp::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		NMHDR* hdr = (NMHDR*)lParam;
 		if (hdr && hdr->idFrom == 9)
 		{
-			if (hdr->code == LVN_ITEMCHANGED)
+			if (hdr->code == NM_CUSTOMDRAW)
+			{
+				LPNMLVCUSTOMDRAW cd = (LPNMLVCUSTOMDRAW)lParam;
+				switch (cd->nmcd.dwDrawStage)
+				{
+				case CDDS_PREPAINT:
+					return CDRF_NOTIFYITEMDRAW;
+				case CDDS_ITEMPREPAINT:
+				{
+					int idx = (int)cd->nmcd.dwItemSpec;
+					auto brighten = [&](COLORREF c, int d) {
+						return RGB(min(255, (int)GetRValue(c) + d), min(255, (int)GetGValue(c) + d), min(255, (int)GetBValue(c) + d));
+					};
+					COLORREF bg = (idx % 2 == 0) ? m_theme.tableBg : brighten(m_theme.tableBg, 8);
+					cd->clrText = m_theme.textColor;
+					cd->clrTextBk = bg;
+					return CDRF_NEWFONT;
+				}
+				default: break;
+				}
+			}
+			else if (hdr->code == LVN_ITEMCHANGED)
 			{
 				int sel = ListView_GetNextItem(m_packetList, -1, LVNI_SELECTED);
 				if (sel >= 0)
@@ -1372,6 +1409,27 @@ LRESULT CALLBACK MainApp::StaticWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 	else pThis = (MainApp*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 	if (pThis) return pThis->HandleMessage(hWnd, message, wParam, lParam);
 	return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+static LRESULT CALLBACK HeaderWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	MainApp* pThis = (MainApp*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+	if (!pThis) return s_oldHeaderProc ? CallWindowProc(s_oldHeaderProc, hWnd, msg, wParam, lParam) : DefWindowProc(hWnd, msg, wParam, lParam);
+
+	switch (msg) {
+	case WM_ERASEBKGND:
+	{
+		HDC hdc = (HDC)wParam;
+		RECT rc; GetClientRect(hWnd, &rc);
+		const Theme& th = pThis->GetTheme();
+		HBRUSH b = CreateSolidBrush(th.splitterBg);
+		FillRect(hdc, &rc, b);
+		DeleteObject(b);
+		return 1;
+	}
+	default:
+		return s_oldHeaderProc ? CallWindowProc(s_oldHeaderProc, hWnd, msg, wParam, lParam) : DefWindowProc(hWnd, msg, wParam, lParam);
+	}
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
