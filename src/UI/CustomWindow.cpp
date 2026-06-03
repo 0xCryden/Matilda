@@ -68,10 +68,15 @@ static LRESULT CALLBACK FramelessSubclassProc(HWND hwnd, UINT msg, WPARAM wParam
         if (left) return HTLEFT;
         if (right) return HTRIGHT;
 
-        // Headbar area -> act like caption for dragging
+        // Headbar area -> act like caption for dragging, but leave left/settings and right window-button areas as client
         if (fd && y >= 0 && y < fd->headbarH)
         {
-            return HTCAPTION;
+            int leftInteractive = 200; // pixels reserved for left interactive items (Settings)
+            int rightButtonsWidth = 132; // 3 * 40 + gaps
+            if (x >= leftInteractive && x < cx - rightButtonsWidth)
+                return HTCAPTION;
+            else
+                return HTCLIENT;
         }
 
         return HTCLIENT;

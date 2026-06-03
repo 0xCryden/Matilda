@@ -9,6 +9,7 @@
 #include <unordered_set>
 #include "Themes.h"
 #include "UI\UIButton.h"
+#include "UI\UIScrollbar.h"
 
 class Logger;
 class CaptureManager;

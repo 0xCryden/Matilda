@@ -23,6 +23,7 @@
 #include "UI\UIElement.h"
 #include "UI\UIButton.h"
 #include "UI\CustomWindow.h"
+#include "UI\UIComboDecorator.h"
 
 #define MAX_LOADSTRING 100
 
@@ -700,6 +701,9 @@ MainApp::MainApp(HINSTANCE hInstance)
 	, m_packetList(nullptr), m_packetDetail(nullptr)
 	, m_previewProtoCombo(nullptr), m_previewSrcPort(nullptr)
 	, m_previewDstIp(nullptr), m_previewDstPort(nullptr), m_previewPayload(nullptr)
+	, m_btnStartObj(nullptr), m_btnReplayObj(nullptr), m_btnSendObj(nullptr), m_btnFilterObj(nullptr)
+	, m_parsedScrollbarObj(nullptr), m_packetDetailScrollbarObj(nullptr)
+	, m_settingsMenu(nullptr), m_headbarHeight(40)
 	, m_splitPos(0), m_splitWidth(8), m_vsplitDragging(false)
 	, m_hsplitPos(0), m_hsplitHeight(6), m_hsplitDragging(false)
 {
@@ -738,7 +742,7 @@ int MainApp::Run(int nCmdShow)
 		AppendMenuW(hSettings, MF_POPUP, (UINT_PTR)hTheme, L"Theme");
 		HMENU hMenuBar = CreateMenu();
 		AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hSettings, L"Settings");
-		SetMenu(hWnd, hMenuBar);
+		m_settingsMenu = hMenuBar; // store for headbar popup; do not attach as traditional menu
 	}
 
 	const int margin = 10, topArea = 40;
@@ -792,6 +796,22 @@ int MainApp::Run(int nCmdShow)
 		rightX + rightW / 2 + m_detailSplitWidth, topArea + 360, rightW / 2, 120,
 		hWnd, (HMENU)18, hInst, this);
 
+	// Create themed scrollbars for parsed panel and packet detail and attach to targets
+	{
+		RECT srect; int parsedX = rightX + rightW / 2 + m_detailSplitWidth; int parsedW = rightW / 2;
+		srect.left = parsedX + parsedW - 16; srect.top = topArea + 360; srect.right = srect.left + 16; srect.bottom = srect.top + 120;
+		m_parsedScrollbarObj.reset(new UI::UIScrollbar());
+		m_parsedScrollbarObj->Create(hWnd, 200, srect);
+		m_parsedScrollbarObj->SetTarget(m_parsedPanel);
+	}
+	{
+		RECT srect2; int hexX = rightX; int hexW = rightW / 2;
+		srect2.left = hexX + hexW - 16; srect2.top = topArea + 360; srect2.right = srect2.left + 16; srect2.bottom = srect2.top + 120;
+		m_packetDetailScrollbarObj.reset(new UI::UIScrollbar());
+		m_packetDetailScrollbarObj->Create(hWnd, 201, srect2);
+		m_packetDetailScrollbarObj->SetTarget(m_packetDetail);
+	}
+
 	// Tooltip for parsed panel
 	m_parsedTooltip = CreateWindowEx(0, TOOLTIPS_CLASS, nullptr,
 		WS_POPUP | TTS_ALWAYSTIP | TTS_BALLOON,
@@ -811,11 +831,13 @@ int MainApp::Run(int nCmdShow)
 	m_appCombo = CreateWindowA("COMBOBOX", "All Applications",
 		WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
 		margin, 10, leftW, 200, hWnd, (HMENU)11, hInst, nullptr);
+	if (m_appCombo) UI::UIComboDecorator::Install(m_appCombo);
 
 	int dcW = rightW - 120; if (dcW < 120)dcW = 120;
 	m_deviceCombo = CreateWindowA("COMBOBOX", "",
 		WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
 		rightX, 10, dcW, 200, hWnd, (HMENU)3, hInst, nullptr);
+	if (m_deviceCombo) UI::UIComboDecorator::Install(m_deviceCombo);
 
 	{
 		RECT r;
@@ -1147,7 +1169,32 @@ LRESULT MainApp::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 
 				// Headbar (top area) and main background
 				RECT headRect = { client.left, client.top, client.right, client.top + topArea };
-				HBRUSH headBrush = CreateSolidBrush(m_theme.headbarBg); FillRect(hdc, &headRect, headBrush); DeleteObject(headBrush);
+				HBRUSH headBrush = CreateSolidBrush(m_theme.headbarBg);
+				FillRect(hdc, &headRect, headBrush);
+				DeleteObject(headBrush);
+
+				// Draw Settings label on left of headbar
+				SetTextColor(hdc, m_theme.textColor);
+				SetBkMode(hdc, TRANSPARENT);
+				HFONT oldF = (HFONT)SelectObject(hdc, UI::s_uiFont);
+				RECT settingsRect = { client.left + 10, client.top + 8, client.left + 150, client.top + topArea - 8 };
+				DrawTextA(hdc, "Settings", -1, &settingsRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+				SelectObject(hdc, oldF);
+
+				// Draw window control buttons on right (min, max, close)
+				int btnW = 40; int btnH = topArea - 8;
+				int bxCloseR = client.right - 10;
+				int bxCloseL = bxCloseR - btnW;
+				RECT closeRect = { bxCloseL, client.top + 4, bxCloseR, client.top + 4 + btnH };
+				HBRUSH cbg = CreateSolidBrush(m_theme.bgButton); FillRect(hdc, &closeRect, cbg); DeleteObject(cbg);
+				SetTextColor(hdc, m_theme.textColor);
+				DrawTextA(hdc, "X", -1, &closeRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+				RECT maxRect = { bxCloseL - btnW - 4, closeRect.top, bxCloseL - 4, closeRect.bottom };
+				RECT minRect = { maxRect.left - btnW - 4, closeRect.top, maxRect.left - 4, closeRect.bottom };
+				HBRUSH bb = CreateSolidBrush(m_theme.bgButton); FillRect(hdc, &maxRect, bb); FillRect(hdc, &minRect, bb); DeleteObject(bb);
+				DrawTextA(hdc, "[]", -1, &maxRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+				DrawTextA(hdc, "_", -1, &minRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
 				RECT mainRect = { client.left, client.top + topArea, client.right, client.bottom };
 				HBRUSH bgBrush = CreateSolidBrush(m_theme.bgWindow); FillRect(hdc, &mainRect, bgBrush); DeleteObject(bgBrush);
