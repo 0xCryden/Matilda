@@ -65,6 +65,7 @@ private:
 
     // Settings menu stored for headbar popup
     HMENU m_settingsMenu;
+    HWND m_headbarWnd;
     int m_headbarHeight;
     // m_previewHexCheckbox removed � payload field interprets hex directly
 

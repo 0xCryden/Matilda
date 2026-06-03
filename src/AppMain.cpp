@@ -622,6 +622,18 @@ void MainApp::RepositionControls(int clientW, int clientH)
 		SCROLLINFO si{}; si.cbSize = sizeof(si); si.fMask = SIF_RANGE | SIF_PAGE;
 		si.nMin = 0; si.nMax = (totalRows > 0) ? totalRows - 1 : 0; si.nPage = (visRows > 0) ? visRows : 1;
 		SetScrollInfo(m_parsedPanel, SB_VERT, &si, TRUE);
+		if (m_parsedScrollbarObj) {
+			m_parsedScrollbarObj->SetRange(si.nMin, si.nMax, si.nPage);
+			m_parsedScrollbarObj->SetPosition(si.nPos);
+		}
+		if (m_packetDetailScrollbarObj) {
+			// If packet detail has a V scroll range, mirror it. Querying directly from the edit control.
+			SCROLLINFO si2{}; si2.cbSize = sizeof(si2); si2.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
+			GetScrollInfo(m_packetDetail, SB_VERT, &si2);
+			m_packetDetailScrollbarObj->SetRange(si2.nMin, si2.nMax, si2.nPage);
+			m_packetDetailScrollbarObj->SetPosition(si2.nPos);
+		}
+
 	}
 
 	// Top controls
@@ -745,25 +757,31 @@ int MainApp::Run(int nCmdShow)
 		m_settingsMenu = hMenuBar; // store for headbar popup; do not attach as traditional menu
 	}
 
-	const int margin = 10, topArea = 40;
+	const int margin = 10;
+	const int topArea = m_headbarHeight;
+	const int controlBarH = 40; // area below headbar for dropdowns and top buttons
 	const int initialW = 800, leftW = 200;
 	const int rightX = margin + leftW + margin, rightW = initialW - rightX - margin;
 
+	int controlsY = topArea + 8;
+	// Create output box and packet list below the control bar; RepositionControls will adjust later
 	m_outputBox = CreateWindowA("EDIT", "",
 		WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
-		margin, topArea, leftW, 420, hWnd, nullptr, hInst, nullptr);
+		margin, controlsY + controlBarH + 8, leftW, 420, hWnd, nullptr, hInst, nullptr);
 
 	m_splitPos = margin + leftW; m_splitWidth = 8; m_vsplitDragging = false;
 	m_hsplitHeight = 6; m_hsplitPos = topArea + 360; m_hsplitDragging = false;
 
+	// packet list will be positioned under control bar; initial Y follows controlsY + controlBarH + 8
 	m_packetList = CreateWindowExA(0, WC_LISTVIEWA, "",
 		WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL | WS_VSCROLL,
-		rightX, topArea, rightW, 360, hWnd, (HMENU)9, hInst, nullptr);
+		rightX, controlsY + controlBarH + 8, rightW, 360, hWnd, (HMENU)9, hInst, nullptr);
 
 	// Preview controls (bottom toolbar)
+	// Position combos below headbar (controlsY)
 	m_previewProtoCombo = CreateWindowExA(WS_EX_CLIENTEDGE, "COMBOBOX", "",
 		WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL,
-		0, 0, 80, 200, hWnd, (HMENU)12, hInst, nullptr);
+		0, controlsY, 80, 200, hWnd, (HMENU)12, hInst, nullptr);
 	if (m_previewProtoCombo) {
 		SendMessageA(m_previewProtoCombo, CB_ADDSTRING, 0, (LPARAM)"TCP");
 		SendMessageA(m_previewProtoCombo, CB_ADDSTRING, 0, (LPARAM)"UDP");
@@ -779,9 +797,10 @@ int MainApp::Run(int nCmdShow)
 		WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL, 0, 0, 160, 24, hWnd, (HMENU)16, hInst, nullptr);
 	// m_previewHexCheckbox intentionally omitted — payload is always treated as hex
 
+	// packet detail (hex) initial placement — will be repositioned later
 	m_packetDetail = CreateWindowA("EDIT", "",
 		WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL | WS_HSCROLL | ES_AUTOHSCROLL,
-		rightX, topArea + 360, rightW / 2, 120, hWnd, (HMENU)10, hInst, nullptr);
+		rightX, controlsY + controlBarH + 360, rightW / 2, 120, hWnd, (HMENU)10, hInst, nullptr);
 
 	// Register custom class for parsed-fields panel
 	{
@@ -1162,7 +1181,7 @@ LRESULT MainApp::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		PAINTSTRUCT ps; HDC hdc = BeginPaint(hWnd, &ps);
 		RECT client; GetClientRect(hWnd, &client);
 
-		const int topArea = 40, bottomControlsH = 100;
+		const int topArea = m_headbarHeight, bottomControlsH = 100; const int controlBarH = 40; // area below headbar for dropdowns and top buttons
 		int bottomTop = client.bottom - bottomControlsH;
 		int rightX = m_splitPos + m_splitWidth;
 		int rightW = client.right - rightX - 10;
@@ -1182,7 +1201,7 @@ LRESULT MainApp::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 				SelectObject(hdc, oldF);
 
 				// Draw window control buttons on right (min, max, close)
-				int btnW = 40; int btnH = topArea - 8;
+				int btnW = 40; int btnH = m_headbarHeight - 8;
 				int bxCloseR = client.right - 10;
 				int bxCloseL = bxCloseR - btnW;
 				RECT closeRect = { bxCloseL, client.top + 4, bxCloseR, client.top + 4 + btnH };
@@ -1220,8 +1239,8 @@ LRESULT MainApp::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 			SelectObject(hdc, old); DeleteObject(pen);
 			};
 
-		// Vertical splitter (console | packets) — full height between toolbar areas
-		drawVSplitter(m_splitPos, m_splitWidth, topArea, bottomTop);
+		// Vertical splitter (console | packets) — full height between toolbar areas (below control bar)
+		drawVSplitter(m_splitPos, m_splitWidth, topArea + controlBarH, bottomTop);
 
 		// Horizontal splitter (list | detail) — right pane only
 		drawHSplitter(m_hsplitPos, m_hsplitHeight, rightX, rightX + rightW);
