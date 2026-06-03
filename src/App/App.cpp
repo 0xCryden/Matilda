@@ -101,7 +101,7 @@ bool App::InitWindow(int nCmdShow)
         0,
         Constants::MainWindowClass,
         Constants::AppName,
-        WS_POPUP | WS_THICKFRAME,
+        WS_POPUP | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU,
         CW_USEDEFAULT, CW_USEDEFAULT,
         Constants::DefaultWindowWidth, Constants::DefaultWindowHeight,
         nullptr,
@@ -129,13 +129,13 @@ bool App::InitWindow(int nCmdShow)
     BOOL value = TRUE;
     DwmSetWindowAttribute(
         m_hwnd,
-        DWMWA_ALLOW_NCPAINT,
+        DWMWA_NCRENDERING_ENABLED,
         &value,
         sizeof(value)
     );
 
-    MARGINS margins = { 1, 1, 1, 1 };
-    DwmExtendFrameIntoClientArea(m_hwnd, &margins);
+    //MARGINS margins = { -1 };
+    //DwmExtendFrameIntoClientArea(m_hwnd, &margins);
 
     ShowWindow(m_hwnd, nCmdShow);
 
@@ -161,6 +161,41 @@ LRESULT App::HandleMessage(
     case WM_PAINT:
     {
         PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        int width = rc.right - rc.left;
+        int height = rc.bottom - rc.top;
+
+        // 1. Create back buffer
+        HDC memDC = CreateCompatibleDC(hdc);
+        HBITMAP memBitmap = CreateCompatibleBitmap(hdc, width, height);
+        HGDIOBJ oldBitmap = SelectObject(memDC, memBitmap);
+
+        // 2. Clear background (important!)
+        HBRUSH bg = CreateSolidBrush(RGB(25, 25, 25));
+        FillRect(memDC, &rc, bg);
+        DeleteObject(bg);
+
+        // 3. Draw everything into back buffer
+        m_window->Draw(memDC, m_themeManager.GetTheme());
+
+        // 4. Blit to screen in one go
+        BitBlt(hdc, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
+
+        // 5. Cleanup
+        SelectObject(memDC, oldBitmap);
+        DeleteObject(memBitmap);
+        DeleteDC(memDC);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+    /*case WM_PAINT:
+    {
+        PAINTSTRUCT ps;
 
         HDC hdc =
             BeginPaint(hwnd, &ps);
@@ -172,7 +207,7 @@ LRESULT App::HandleMessage(
         EndPaint(hwnd, &ps);
 
         return 0;
-    }
+    }*/
 
     case WM_LBUTTONDOWN:
     {

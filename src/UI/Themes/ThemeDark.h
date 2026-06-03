@@ -17,4 +17,10 @@ public:
         UIWindow* window,
         int state
     ) override;
+
+    void DrawBackground(
+        HDC hdc,
+        const UIRect& rect,
+        int state
+    ) override;
 };

@@ -26,4 +26,10 @@ public:
         UIWindow* window,
         int state
     ) = 0;
+
+    virtual void DrawBackground(
+        HDC hdc,
+        const UIRect& rect,
+        int state
+    ) = 0;
 };

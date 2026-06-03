@@ -13,6 +13,10 @@ void UIWindow::SetSize(int w, int h)
 
 void UIWindow::Draw(HDC hdc, UITheme* theme)
 {
+    UIRect r{ m_x, m_y, m_w, m_h };
+
+    theme->DrawBackground(hdc, r, (int)m_state);
+
     for (auto* c : m_children)
         c->Draw(hdc, theme);
 }

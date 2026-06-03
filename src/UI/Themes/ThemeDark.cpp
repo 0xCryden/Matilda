@@ -61,3 +61,15 @@ void ThemeDark::DrawTitlebar(
 
     DrawTextW(hdc, Constants::AppName, -1, &textRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 }
+
+void ThemeDark::DrawBackground(
+    HDC hdc,
+    const UIRect& rect,
+    int state)
+{
+    RECT r{ rect.x, rect.y, rect.x + rect.w, rect.y + rect.h };
+    COLORREF bg = RGB(30, 30, 30);
+    HBRUSH brush = CreateSolidBrush(bg);
+    FillRect(hdc, &r, brush);
+    DeleteObject(brush);
+}
