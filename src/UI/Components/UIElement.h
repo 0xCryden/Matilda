@@ -4,6 +4,7 @@
 
 class UITheme;
 class UIEventQueue;
+class UIWindow;
 
 enum class UIElementState
 {
@@ -22,6 +23,7 @@ public:
     virtual void Draw(HDC hdc, UITheme* theme) = 0;
 
     virtual void OnMouseDown(int mx, int my, UIEventQueue& events);
+    virtual void OnMouseUp(int mx, int my, UIEventQueue& events);
     virtual void OnMouseMove(int mx, int my);
 
     bool HitTest(int mx, int my) const;
@@ -33,7 +35,11 @@ public:
     void SetState(UIElementState state);
     UIElementState GetState() const { return m_state; }
 
+    HWND GetHWND() const;
+
 protected:
+    UIWindow* m_window = nullptr;
+
     int m_x;
     int m_y;
     int m_w;

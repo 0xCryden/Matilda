@@ -1,6 +1,10 @@
 #include "App.h"
 #include "../UI/MainView.h"
 #include <windowsx.h>
+#include "../Utils/Constants.h"
+#include <dwmapi.h>
+
+#pragma comment(lib, "dwmapi.lib")
 
 namespace
 {
@@ -86,22 +90,20 @@ int App::Run(int nCmdShow)
 
 bool App::InitWindow(int nCmdShow)
 {
-    const wchar_t CLASS_NAME[] = L"MyAppWindow";
-
     WNDCLASS wc = {};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = m_hInstance;
-    wc.lpszClassName = CLASS_NAME;
+    wc.lpszClassName = Constants::MainWindowClass;
 
     RegisterClass(&wc);
 
     m_hwnd = CreateWindowEx(
         0,
-        CLASS_NAME,
-        L"UI Tool",
-        WS_OVERLAPPEDWINDOW,
+        Constants::MainWindowClass,
+        Constants::AppName,
+        WS_POPUP | WS_THICKFRAME,
         CW_USEDEFAULT, CW_USEDEFAULT,
-        900, 600,
+        Constants::DefaultWindowWidth, Constants::DefaultWindowHeight,
         nullptr,
         nullptr,
         m_hInstance,
@@ -111,10 +113,34 @@ bool App::InitWindow(int nCmdShow)
     if (!m_hwnd)
         return false;
 
+    SetWindowText(m_hwnd, Constants::AppName);
+
+    HICON icon = (HICON)LoadImage(
+        m_hInstance,
+        MAKEINTRESOURCE(IDI_APPLICATION), // or your custom icon
+        IMAGE_ICON,
+        32, 32,
+        LR_DEFAULTCOLOR
+    );
+
+    SendMessage(m_hwnd, WM_SETICON, ICON_BIG, (LPARAM)icon);
+    SendMessage(m_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+
+    BOOL value = TRUE;
+    DwmSetWindowAttribute(
+        m_hwnd,
+        DWMWA_ALLOW_NCPAINT,
+        &value,
+        sizeof(value)
+    );
+
+    MARGINS margins = { 1, 1, 1, 1 };
+    DwmExtendFrameIntoClientArea(m_hwnd, &margins);
+
     ShowWindow(m_hwnd, nCmdShow);
 
     m_window = new UIWindow(m_hwnd);
-    m_window->SetSize(900, 600);
+    m_window->SetSize(Constants::DefaultWindowWidth, Constants::DefaultWindowHeight);
 
     return true;
 }
@@ -166,6 +192,18 @@ LRESULT App::HandleMessage(
         return 0;
     }
 
+    case WM_LBUTTONUP:
+    {
+        int x = GET_X_LPARAM(lParam);
+        int y = GET_Y_LPARAM(lParam);
+
+        m_window->OnMouseUp(
+            x,
+            y,
+            m_eventQueue);
+        return 0;
+    }
+
     case WM_MOUSEMOVE:
     {
         int x = GET_X_LPARAM(lParam);
@@ -180,6 +218,43 @@ LRESULT App::HandleMessage(
     case WM_DESTROY:
     {
         PostQuitMessage(0);
+        return 0;
+    }
+    
+    case WM_NCHITTEST:
+    {
+        const int border = Constants::WindowBorderThickness;
+
+        POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+        ScreenToClient(hwnd, &pt);
+
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        bool left = pt.x < border;
+        bool right = pt.x > rc.right - border;
+        bool top = pt.y < border;
+        bool bottom = pt.y > rc.bottom - border;
+
+        if (top && left) return HTTOPLEFT;
+        if (top && right) return HTTOPRIGHT;
+        if (bottom && left) return HTBOTTOMLEFT;
+        if (bottom && right) return HTBOTTOMRIGHT;
+        if (left) return HTLEFT;
+        if (right) return HTRIGHT;
+        if (top) return HTTOP;
+        if (bottom) return HTBOTTOM;
+
+        return HTCLIENT;
+    }
+    
+    case WM_GETMINMAXINFO:
+    {
+        MINMAXINFO* mmi = (MINMAXINFO*)lParam;
+
+        mmi->ptMinTrackSize.x = 400;
+        mmi->ptMinTrackSize.y = 300;
+
         return 0;
     }
     }

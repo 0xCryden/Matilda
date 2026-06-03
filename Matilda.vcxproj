@@ -86,6 +86,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)..\PcapPlusPlus\Pcap++\header;$(ProjectDir)..\PcapPlusPlus\Packet++\header;$(ProjectDir)..\PcapPlusPlus\Common++\header</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -103,6 +104,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)..\PcapPlusPlus\Pcap++\header;$(ProjectDir)..\PcapPlusPlus\Packet++\header;$(ProjectDir)..\PcapPlusPlus\Common++\header</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -118,6 +120,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)..\PcapPlusPlus\Pcap++\header;$(ProjectDir)..\PcapPlusPlus\Packet++\header;$(ProjectDir)..\PcapPlusPlus\Common++\header</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -135,6 +138,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)..\PcapPlusPlus\Pcap++\header;$(ProjectDir)..\PcapPlusPlus\Packet++\header;$(ProjectDir)..\PcapPlusPlus\Common++\header</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -144,10 +148,78 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\**\*.h" />
+    <ClInclude Include="src\Utils\Constants.h" />
+    <ClInclude Include="src\AppMain.h" />
+    <ClInclude Include="src\App\App.h" />
+    <ClInclude Include="src\App\AppController.h" />
+    <ClInclude Include="src\CaptureManager.h" />
+    <ClInclude Include="src\Capture\CaptureDevice.h" />
+    <ClInclude Include="src\Capture\CaptureSession.h" />
+    <ClInclude Include="src\Capture\DeviceEnumerator.h" />
+    <ClInclude Include="src\Capture\NotificationDispatcher.h" />
+    <ClInclude Include="src\Capture\PacketStore.h" />
+    <ClInclude Include="src\Capture\ProcessMapper.h" />
+    <ClInclude Include="src\ConnectionTracker.h" />
+    <ClInclude Include="src\framework.h" />
+    <ClInclude Include="src\Logger.h" />
+    <ClInclude Include="src\Net\ChecksumUtils.h" />
+    <ClInclude Include="src\Net\PacketRewriter.h" />
+    <ClInclude Include="src\Platform.h" />
+    <ClInclude Include="src\Resource.h" />
+    <ClInclude Include="src\targetver.h" />
+    <ClInclude Include="src\Themes.h" />
+    <ClInclude Include="src\UI\Components\UIButton.h" />
+    <ClInclude Include="src\UI\Components\UIComboDecorator.h" />
+    <ClInclude Include="src\UI\Components\UIElement.h" />
+    <ClInclude Include="src\UI\Components\UIScrollbar.h" />
+    <ClInclude Include="src\UI\Components\UITitlebar.h" />
+    <ClInclude Include="src\UI\Components\UIWindow.h" />
+    <ClInclude Include="src\UI\CustomWindow.h" />
+    <ClInclude Include="src\UI\HexViewer.h" />
+    <ClInclude Include="src\UI\MainView.h" />
+    <ClInclude Include="src\UI\PacketListView.h" />
+    <ClInclude Include="src\UI\ProcessEnumerator.h" />
+    <ClInclude Include="src\UI\ThemeManager.h" />
+    <ClInclude Include="src\UI\Themes\ThemeDark.h" />
+    <ClInclude Include="src\UI\Themes\ThemeLight.h" />
+    <ClInclude Include="src\UI\UIEvent.h" />
+    <ClInclude Include="src\UI\UIEventQueue.h" />
+    <ClInclude Include="src\UI\UITheme.h" />
+    <ClInclude Include="src\Utils\Constants.h" />
+    <ClInclude Include="src\Utils\HexParser.h" />
+    <ClInclude Include="src\UI\Components\UITitlebar.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\**\*.cpp" />
+    <ClCompile Include="src\AppMain.cpp" />
+    <ClCompile Include="src\App\App.cpp" />
+    <ClCompile Include="src\App\AppController.cpp" />
+    <ClCompile Include="src\CaptureManager.cpp" />
+    <ClCompile Include="src\Capture\CaptureDevice.cpp" />
+    <ClCompile Include="src\Capture\CaptureSession.cpp" />
+    <ClCompile Include="src\Capture\DeviceEnumerator.cpp" />
+    <ClCompile Include="src\Capture\NotificationDispatcher.cpp" />
+    <ClCompile Include="src\Capture\PacketStore.cpp" />
+    <ClCompile Include="src\Capture\ProcessMapper.cpp" />
+    <ClCompile Include="src\ConnectionTracker.cpp" />
+    <ClCompile Include="src\Logger.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Net\ChecksumUtils.cpp" />
+    <ClCompile Include="src\Net\PacketRewriter.cpp" />
+    <ClCompile Include="src\UI\Components\UIButton.cpp" />
+    <ClCompile Include="src\UI\Components\UIComboDecorator.cpp" />
+    <ClCompile Include="src\UI\Components\UIElement.cpp" />
+    <ClCompile Include="src\UI\Components\UIScrollbar.cpp" />
+    <ClCompile Include="src\UI\Components\UIWindow.cpp" />
+    <ClCompile Include="src\UI\CustomWindow.cpp" />
+    <ClCompile Include="src\UI\MainView.cpp" />
+    <ClCompile Include="src\UI\PacketListView.cpp" />
+    <ClCompile Include="src\UI\ProcessEnumerator.cpp" />
+    <ClCompile Include="src\UI\ThemeManager.cpp" />
+    <ClCompile Include="src\UI\Themes\ThemeDark.cpp" />
+    <ClCompile Include="src\UI\Themes\ThemeLight.cpp" />
+    <ClCompile Include="src\UI\UIEventQueue.cpp" />
+    <ClCompile Include="src\Utils\HexParser.cpp" />
+    <ClCompile Include="src\UI\Components\UITitlebar.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\Matilda.rc" />

@@ -2,10 +2,10 @@
 
 #include <windows.h>
 
-#include "../UI/UIWindow.h"
+#include "../UI/Components/UIWindow.h"
 #include "../UI/UIEventQueue.h"
-#include "AppController.h"
 #include "../UI/ThemeManager.h"
+#include "AppController.h"
 
 class App
 {

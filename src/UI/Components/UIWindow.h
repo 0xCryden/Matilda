@@ -12,11 +12,18 @@ public:
     void Draw(HDC hdc, UITheme* theme) override;
 
     void OnMouseDown(int mx, int my, UIEventQueue& events) override;
+    void OnMouseUp(int mx, int my, UIEventQueue& events) override;
     void OnMouseMove(int mx, int my) override;
+
+    void SetCapture(UIElement* element);
+    void ReleaseCapture();
+
+    HWND GetHWND() const;
 
 private:
     HWND m_hwnd;
 
+    UIElement* m_capturedElement = nullptr;
     UIElement* m_hoveredElement = nullptr;
 };
 

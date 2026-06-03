@@ -8,8 +8,8 @@ void AppController::HandleEvent(const UIEvent& e)
 
     switch (e.m_targetId)
     {
-    case 1: Play(); break;
-    case 2: Settings(); break;
+    case 2: Play(); break;
+    case 3: Settings(); break;
     }
 }
 

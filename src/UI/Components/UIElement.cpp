@@ -1,5 +1,6 @@
 #include "UIElement.h"
 #include "../UIEventQueue.h"
+#include "UIWindow.h"
 
 UIElement::UIElement(int x, int y, int w, int h, int id)
     : m_x(x), m_y(y), m_w(w), m_h(h), m_id(id)
@@ -30,11 +31,23 @@ int UIElement::GetId() const
 
 void UIElement::OnMouseDown(int mx, int my, UIEventQueue& events)
 {
+    for (auto it = m_children.rbegin(); it != m_children.rend(); ++it)
+    {
+        if ((*it)->HitTest(mx, my))
+        {
+            (*it)->OnMouseDown(mx, my, events);
+            return;
+        }
+    }
+}
+
+void UIElement::OnMouseUp(int mx, int my, UIEventQueue& events)
+{
     for (auto* child : m_children)
     {
         if (child->HitTest(mx, my))
         {
-            child->OnMouseDown(mx, my, events);
+            child->OnMouseUp(mx, my, events);
             return;
         }
     }
@@ -42,12 +55,6 @@ void UIElement::OnMouseDown(int mx, int my, UIEventQueue& events)
 
 void UIElement::OnMouseMove(int mx, int my)
 {
-    /*bool inside = HitTest(mx, my);
-
-    m_state = inside
-        ? UIElementState::Hovered
-        : UIElementState::Normal;*/
-
     for (auto* child : m_children)
         child->OnMouseMove(mx, my);
 }
@@ -55,6 +62,11 @@ void UIElement::OnMouseMove(int mx, int my)
 void UIElement::SetState(UIElementState state)
 {
     m_state = state;
+}
+
+HWND UIElement::GetHWND() const
+{
+    return m_window ? m_window->GetHWND() : nullptr;
 }
 
 /*#include "UIElement.h"

@@ -29,11 +29,34 @@ void UIWindow::OnMouseDown(int mx, int my, UIEventQueue& events)
     }
 }
 
+void UIWindow::OnMouseUp(int mx, int my, UIEventQueue& events)
+{
+    if (m_capturedElement)
+    {
+        m_capturedElement->OnMouseUp(mx, my, events);
+        return;
+    }
+
+    for (auto* c : m_children)
+    {
+        if (c->HitTest(mx, my))
+        {
+            c->OnMouseUp(mx, my, events);
+            return;
+        }
+    }
+}
+
 void UIWindow::OnMouseMove(int mx, int my)
 {
+    if (m_capturedElement)
+    {
+        m_capturedElement->OnMouseMove(mx, my);
+        return;
+    }
+
     UIElement* newHovered = nullptr;
 
-    // Find top-most hovered element
     for (auto* c : m_children)
     {
         if (c->HitTest(mx, my))
@@ -55,6 +78,22 @@ void UIWindow::OnMouseMove(int mx, int my)
     }
 }
 
+void UIWindow::SetCapture(UIElement* element)
+{
+    m_capturedElement = element;
+    ::SetCapture(m_hwnd);
+}
+
+void UIWindow::ReleaseCapture()
+{
+    m_capturedElement = nullptr;
+    ::ReleaseCapture();
+}
+
+HWND UIWindow::GetHWND() const
+{
+    return m_hwnd;
+}
 /*#include "UIWindow.h"
 #include "../AppMain.h"
 #include <string>
