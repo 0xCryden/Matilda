@@ -101,7 +101,7 @@ bool App::InitWindow(int nCmdShow)
 		0,
 		Constants::MainWindowClass,
 		Constants::AppName,
-		WS_POPUP | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU,
+		WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU,
 		CW_USEDEFAULT, CW_USEDEFAULT,
 		Constants::DefaultWindowWidth, Constants::DefaultWindowHeight,
 		nullptr,
@@ -316,10 +316,27 @@ LRESULT App::HandleMessage(
 		int h = HIWORD(lParam);
 
 		ResizeBackBuffer(w, h);
+		
+		// TODO: other elements need resizing too (not just main window)
+		if (m_window)
+			m_window->SetSize(w, h);
+
 		InvalidateRect(hwnd, nullptr, FALSE);
 
 		return 0;
 	}
+
+	case WM_NCCALCSIZE:
+	{
+		if (wParam)
+			return 0;
+
+		break;
+	}
+	case WM_NCPAINT:
+		return 0;
+	case WM_NCACTIVATE:
+		return TRUE;
 	}
 
 	return DefWindowProc(
